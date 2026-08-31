@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **PR-D1 (CLI Version Package)**:
+  - System and build metadata reporter `internal/version/` with plain text and JSON outputs.
 - **PR-5 (Curation TUI & Preview)**:
   - Interactive Bubbletea TUI for navigating and reviewing asset catalogs (`internal/tui/model.go`, `cmd/matriz-tui/main.go`).
   - Key bindings and navigation controls (`internal/tui/keys.go`).
