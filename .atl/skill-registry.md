@@ -6,6 +6,7 @@ Last updated: 2026-08-31
 
 ## Sources scanned
 
+- .claude/skills
 - /Users/orlandojesus/.agents/skills
 - /Users/orlandojesus/.config/opencode/skills
 - /Users/orlandojesus/.claude/skills
@@ -25,6 +26,7 @@ Last updated: 2026-08-31
 | --- | --- | --- | --- |
 | `branch-pr` | Create Gentle AI pull requests with issue-first checks. Trigger: creating, opening, or preparing PRs for review. | user | `/Users/orlandojesus/.agents/skills/branch-pr/SKILL.md` |
 | `chained-pr` | Trigger: PRs over 400 lines, stacked PRs, review slices. Split oversized changes into chained PRs that protect review focus. | user | `/Users/orlandojesus/.agents/skills/chained-pr/SKILL.md` |
+| `changelog-writer` | Escribe y mantiene archivos CHANGELOG.md siguiendo el estilo de changelog de Claude Code (lista plana de bullets que empiezan por verbo-categoría, SemVer, enfoque en el usuario). Úsala SIEMPRE que el usuario quiera crear un changelog, añadir una entrada de versión, documentar una release, convertir commits de git en notas de cambios, o cuando mencione "changelog", "notas de versión", "release notes", "qué cambió en esta versión" o "documentar esta versión" — aunque no pida explícitamente "un changelog". También aplícala al revisar o reescribir entradas de un changelog existente para que cumplan estas convenciones. | project | `/Users/orlandojesus/Desktop/matriz-mcp/.claude/skills/changelog-writer/SKILL.md` |
 | `cognitive-doc-design` | Design docs that reduce cognitive load. Trigger: writing guides, READMEs, RFCs, onboarding, architecture, or review-facing docs. | user | `/Users/orlandojesus/.agents/skills/cognitive-doc-design/SKILL.md` |
 | `comment-writer` | Write warm, direct collaboration comments. Trigger: PR feedback, issue replies, reviews, Slack messages, or GitHub comments. | user | `/Users/orlandojesus/.agents/skills/comment-writer/SKILL.md` |
 | `find-skills` | Helps users discover and install agent skills when they ask questions like "how do I do X", "find a skill for X", "is there a skill that can...", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill. | user | `/Users/orlandojesus/.agents/skills/find-skills/SKILL.md` |
