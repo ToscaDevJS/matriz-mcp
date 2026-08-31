@@ -107,6 +107,7 @@ func NewServer(cfg *config.Config, reg *providers.Registry, guard *budget.Guard)
 	}, nil)
 
 	RegisterTools(srv, cfg, reg, guard)
+	RegisterResources(srv, cfg)
 	return srv
 }
 

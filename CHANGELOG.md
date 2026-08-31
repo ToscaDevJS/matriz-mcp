@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **PR-4 (Site Manifest & MCP Resource)**:
+  - Manifest parser and validator for `matriz.json` matching `matriz.manifest/v1` schema (`internal/manifest/manifest.go`).
+  - Filesystem asset scanner `ScanProject` combining disk images and `.meta.json` sidecars (`internal/manifest/scan.go`).
+  - MCP Resource handler exposing `matriz://project/manifest` (`internal/mcpserver/resources.go`).
+  - Manifest documentation in Spanish (`docs/manifiesto.md`).
+  - Test assertions `T-16`, `T-17`, `T-18` passing.
 - **PR-3 (MCP Server & Tools)**:
   - Local stdio MCP server entrypoint (`cmd/matriz-mcp/main.go`).
   - Five domain MCP tools: `img_list_models`, `img_transform`, `img_export_web`, `img_generate_drafts`, and `img_refine` (`internal/mcpserver/`).

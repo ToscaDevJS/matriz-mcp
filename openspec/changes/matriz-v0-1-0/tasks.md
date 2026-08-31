@@ -48,9 +48,9 @@ Chain strategy: stacked-to-main
 - [x] 3.3 REFACTOR: Verify thumbnail sizes (<= 512px) and tool annotations
 
 ## Phase 4: Site Manifest Resource (PR-4)
-- [ ] 4.1 RED: Write `T-16`, `T-17`, `T-18` tests for manifest schema, scanner, and MCP resource
-- [ ] 4.2 GREEN: Implement `internal/manifest/manifest.go`, `scan.go`, and resource registration
-- [ ] 4.3 REFACTOR: Verify round-trip manifest sync from filesystem
+- [x] 4.1 RED: Write `T-16`, `T-17`, `T-18` tests for manifest schema, scanner, and MCP resource
+- [x] 4.2 GREEN: Implement `internal/manifest/manifest.go`, `scan.go`, and resource registration
+- [x] 4.3 REFACTOR: Verify round-trip manifest sync from filesystem
 
 ## Phase 5: Curation TUI (PR-5)
 - [ ] 5.1 RED: Write `T-19` Bubbletea model unit test in `internal/tui/`
