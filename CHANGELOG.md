@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **PR-5 (Curation TUI & Preview)**:
+  - Interactive Bubbletea TUI for navigating and reviewing asset catalogs (`internal/tui/model.go`, `cmd/matriz-tui/main.go`).
+  - Key bindings and navigation controls (`internal/tui/keys.go`).
+  - Local static HTML visual preview generator and browser launcher (`internal/preview/html.go`).
+  - Strict TDD model test assertion `T-19` passing without filesystem side effects.
+  - Verification report validated and admitted with 100% spec scenario coverage (`openspec/changes/matriz-v0-1-0/verify-report.md`).
 - **PR-4 (Site Manifest & MCP Resource)**:
   - Manifest parser and validator for `matriz.json` matching `matriz.manifest/v1` schema (`internal/manifest/manifest.go`).
   - Filesystem asset scanner `ScanProject` combining disk images and `.meta.json` sidecars (`internal/manifest/scan.go`).

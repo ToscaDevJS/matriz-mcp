@@ -53,6 +53,6 @@ Chain strategy: stacked-to-main
 - [x] 4.3 REFACTOR: Verify round-trip manifest sync from filesystem
 
 ## Phase 5: Curation TUI (PR-5)
-- [ ] 5.1 RED: Write `T-19` Bubbletea model unit test in `internal/tui/`
-- [ ] 5.2 GREEN: Implement `internal/tui/model.go`, `keys.go`, `internal/preview/html.go`, and `cmd/matriz-tui/main.go`
-- [ ] 5.3 REFACTOR: Verify full test suite `go test ./...` and `go vet ./...` across entire workspace
+- [x] 5.1 RED: Write `T-19` Bubbletea model unit test in `internal/tui/`
+- [x] 5.2 GREEN: Implement `internal/tui/model.go`, `keys.go`, `internal/preview/html.go`, and `cmd/matriz-tui/main.go`
+- [x] 5.3 REFACTOR: Verify full test suite `go test ./...` and `go vet ./...` across entire workspace
