@@ -1,0 +1,30 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Go 1.26 (darwin/arm64)
+  Architecture: Clean architecture (internal/core, internal/providers, internal/budget, internal/manifest, cmd/matriz-mcp, cmd/matriz-tui)
+  Testing: Table-driven unit tests, golden files for transforms, fake provider for generative tests
+  Style: Standard Go idioms, zero CGo dependencies (WASM/pure Go)
+
+rules:
+  proposal:
+    - Include rollback plan and clear capabilities contract
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Document architecture decisions with rationale
+    - Maintain single core with two frontends (MCP stdio and TUI)
+  tasks:
+    - Strict TDD (RED -> GREEN -> REFACTOR) for every work unit
+    - Group by PR units (PR-0 to PR-5)
+  apply:
+    guidelines:
+      - Never modify client inputs in-place
+      - stdout belongs to MCP protocol, logging to stderr only
+    tdd: true
+    test_command: "go test ./..."
+  verify:
+    test_command: "go test ./..."
+    build_command: "go build ./..."
+    coverage_threshold: 80

@@ -1,0 +1,27 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Output directories
+/out
+/dist
+/tmp
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# IDEs
+.idea/
+.vscode/
+
+# OS specific
+.DS_Store
+
+# Explicitly preserve sidecars (do not ignore *.meta.json)
+!*.meta.json
