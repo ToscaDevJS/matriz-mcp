@@ -11,6 +11,6 @@
 - [x] 2.3 REFACTOR: Verify masking of API keys and zero network cost
 
 ## Phase 3: Unified CLI Entrypoint & Verification (PR-D3)
-- [ ] 3.1 RED: Write integration test for `cmd/matriz` subcommands in `cmd/matriz/main_test.go`
-- [ ] 3.2 GREEN: Implement `cmd/matriz/main.go` with subcommand routing (`doctor`, `version`, `mcp`, `tui`)
-- [ ] 3.3 REFACTOR: Run full test suite `go test ./...`, `go vet ./...`, verify SDD report and archive
+- [x] 3.1 RED: Write integration test for `cmd/matriz` subcommands in `cmd/matriz/main_test.go`
+- [x] 3.2 GREEN: Implement `cmd/matriz/main.go` with subcommand routing (`doctor`, `version`, `mcp`, `tui`)
+- [x] 3.3 REFACTOR: Run full test suite `go test ./...`, `go vet ./...`, verify SDD report and archive

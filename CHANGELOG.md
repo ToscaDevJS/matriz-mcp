@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **PR-D3 (Unified CLI & SDD Complete)**:
+  - Unified CLI binary `cmd/matriz/main.go` supporting `doctor`, `version`, `mcp`, `tui`, and `help`.
+  - Full automated diagnostics for Go runtime, codecs, configuration, API keys, project structure, and MCP client discovery.
+  - Complete SDD verification report with 100% test scenario pass rate.
 - **PR-D2 (CLI Doctor Diagnostics Engine)**:
   - Multi-probe diagnostics engine in `internal/doctor/` inspecting pure-Go image codecs, configuration, masked API keys, project manifest, and MCP client discovery.
 - **PR-D1 (CLI Version Package)**:
