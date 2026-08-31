@@ -38,9 +38,9 @@ Chain strategy: stacked-to-main
 - [x] 1.3 REFACTOR: Generate reference golden fixtures with `-update` and verify byte-for-byte passes
 
 ## Phase 2: Providers, Gemini & Budget Guard (PR-2)
-- [ ] 2.1 RED: Write `T-08`, `T-09`, `T-10`, `T-10b`, `T-10c`, `T-10d` tests in `internal/budget/` and `internal/providers/`
-- [ ] 2.2 GREEN: Implement `Provider` interface, `registry.go`, `fakeProvider`, `gemini.go`, `pricing.go`, and `Guard`
-- [ ] 2.3 REFACTOR: Verify offline determinism and budget ceiling enforcement
+- [x] 2.1 RED: Write `T-08`, `T-09`, `T-10`, `T-10b`, `T-10c`, `T-10d` tests in `internal/budget/` and `internal/providers/`
+- [x] 2.2 GREEN: Implement `Provider` interface, `registry.go`, `fakeProvider`, `gemini.go`, `pricing.go`, and `Guard`
+- [x] 2.3 REFACTOR: Verify offline determinism and budget ceiling enforcement
 
 ## Phase 3: MCP Server (PR-3)
 - [ ] 3.1 RED: Write `T-11` to `T-15` tool execution and thumbnail tests in `internal/mcpserver/`

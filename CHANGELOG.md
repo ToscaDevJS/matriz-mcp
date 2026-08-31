@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **PR-2 (Providers, Gemini & Budget Guard)**:
+  - Generative `Provider` interface, capabilities, and request/result structures (`internal/providers/provider.go`).
+  - Thread-safe `Guard` enforcing pre-flight budget and call ceilings failing closed (`internal/budget/budget.go`).
+  - Deterministic offline `FakeProvider` for fast testing with zero network IO (`internal/providers/fake/fake.go`).
+  - Google Gemini adapter over `google.golang.org/genai` for multimodal generation and editing (`internal/providers/gemini/gemini.go`).
+  - Fixed-token pricing table with worst-case fail-closed fallback for unknown models (`internal/providers/gemini/pricing.go`).
+  - Provider registry for dynamic resolution (`internal/providers/registry.go`).
+  - Providers documentation with consultation date (`docs/proveedores.md`).
+  - Tests `T-08`, `T-09`, `T-10`, `T-10b`, `T-10c`, `T-10d`.
 - **PR-1 (Deterministic Pipeline)**:
   - Image transformation operations: `Crop`, `Resize`, `Adjust` (brightness/contrast/saturation), `Rotate`, `Sharpen` (`internal/core/transform.go`).
   - Multi-format encoding for JPEG, PNG, WebP, and AVIF via WASM/pure Go without CGo (`internal/core/encode.go`).
