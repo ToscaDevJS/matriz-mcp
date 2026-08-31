@@ -33,9 +33,9 @@ Chain strategy: stacked-to-main
 - [x] 0.3 REFACTOR: Verify `go test ./...` and `go vet ./...` pass cleanly
 
 ## Phase 1: Deterministic Pipeline (PR-1)
-- [ ] 1.1 RED: Write golden file tests (`T-03`, `T-04`) and unit tests (`T-05`, `T-06`, `T-07`) in `internal/core/`
-- [ ] 1.2 GREEN: Implement `transform.go`, `encode.go`, `export.go`, and `sidecar.go`
-- [ ] 1.3 REFACTOR: Generate reference golden fixtures with `-update` and verify byte-for-byte passes
+- [x] 1.1 RED: Write golden file tests (`T-03`, `T-04`) and unit tests (`T-05`, `T-06`, `T-07`) in `internal/core/`
+- [x] 1.2 GREEN: Implement `transform.go`, `encode.go`, `export.go`, and `sidecar.go`
+- [x] 1.3 REFACTOR: Generate reference golden fixtures with `-update` and verify byte-for-byte passes
 
 ## Phase 2: Providers, Gemini & Budget Guard (PR-2)
 - [ ] 2.1 RED: Write `T-08`, `T-09`, `T-10`, `T-10b`, `T-10c`, `T-10d` tests in `internal/budget/` and `internal/providers/`
