@@ -20,12 +20,6 @@ type Guard struct {
 
 // NewGuard creates a Guard with spending limit in USD and max allowed generative calls.
 func NewGuard(limitUSD float64, maxCalls int) *Guard {
-	if limitUSD <= 0 {
-		limitUSD = 2.00
-	}
-	if maxCalls <= 0 {
-		maxCalls = 20
-	}
 	return &Guard{
 		limitUSD: limitUSD,
 		maxCalls: maxCalls,

@@ -1,0 +1,40 @@
+# Herramientas MCP de Matriz
+
+Matriz expone cinco herramientas estructuradas agrupadas bajo el prefijo `img_`.
+
+## Tabla de decisión: generativo vs determinista
+
+| Lo que se quiere | Tool | Coste |
+|---|---|---|
+| Recortar, encuadrar de nuevo | `img_transform` | 0 |
+| Cambiar tamaño | `img_transform` | 0 |
+| Corregir luz, contraste, saturación | `img_transform` | 0 |
+| Convertir a WebP/AVIF | `img_export_web` | 0 |
+| Generar variantes responsive y `srcset` | `img_export_web` | 0 |
+| Rotar, enderezar | `img_transform` | 0 |
+| Crear una imagen que no existe | `img_generate_drafts` | **paga** |
+| Quitar o sustituir el fondo | `img_refine` | **paga** |
+| Borrar un objeto de la foto | `img_refine` (inpaint) | **paga** |
+| Ampliar el encuadre más allá del borde | `img_refine` (outpaint) | **paga** |
+
+## Detalle de herramientas
+
+### `img_list_models`
+- **Coste**: Gratuito (0).
+- **Uso**: Consulta el proveedor activo, modelos configurados, llamadas realizadas y estado de presupuesto restante.
+
+### `img_transform`
+- **Coste**: Gratuito (0) e instantáneo.
+- **Uso**: Operaciones locales de transformación (recorte, redimensionado, ajustes de brillo/contraste/saturación, rotación y enfoque) sin conexión a la red.
+
+### `img_export_web`
+- **Coste**: Gratuito (0) e instantáneo.
+- **Uso**: Genera variantes responsive optimizadas (AVIF y WebP) para los anchos estándar `[420, 768, 1024, 1440, 1920]` sin exceder el ancho original y genera el `srcset` correspondiente.
+
+### `img_generate_drafts`
+- **Coste**: De pago (facturado por tokens del proveedor).
+- **Uso**: Genera de 1 a 4 borradores a resolución reducida (máx. 768 px) a partir de un prompt textual. Retorna miniaturas para inspección visual directa.
+
+### `img_refine`
+- **Coste**: De pago (facturado por tokens del proveedor).
+- **Uso**: Operaciones multimodales generativas (inpainting con máscara, outpainting o eliminación de fondo).

@@ -1,0 +1,252 @@
+package mcpserver
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/toscodevjs/matriz/internal/budget"
+	"github.com/toscodevjs/matriz/internal/config"
+	"github.com/toscodevjs/matriz/internal/core"
+	"github.com/toscodevjs/matriz/internal/providers"
+)
+
+type GenerateDraftsIn struct {
+	Prompt         string `json:"prompt" jsonschema:"what to generate"`
+	NegativePrompt string `json:"negative_prompt,omitempty"`
+	Count          int    `json:"count" jsonschema:"number of drafts, 1..4"`
+	AspectRatio    string `json:"aspect_ratio" jsonschema:"e.g. 16:9, 1:1, 21:9"`
+	Slot           string `json:"slot,omitempty" jsonschema:"manifest slot id this image is for; fills dimensions automatically"`
+	Seed           *int64 `json:"seed,omitempty" jsonschema:"omit for random; the response always reports the seed used"`
+}
+
+type GenerateDraftsOut struct {
+	Drafts     []core.Asset `json:"drafts"`
+	Seeds      []int64      `json:"seeds"`
+	CostUSD    float64      `json:"cost_usd"`
+	BudgetLeft float64      `json:"budget_left_usd"`
+}
+
+func handleGenerateDrafts(cfg *config.Config, reg *providers.Registry, guard *budget.Guard) mcp.ToolHandlerFor[GenerateDraftsIn, GenerateDraftsOut] {
+	return func(ctx context.Context, req *mcp.CallToolRequest, in GenerateDraftsIn) (*mcp.CallToolResult, GenerateDraftsOut, error) {
+		provider, err := reg.Get(cfg.Provider)
+		if err != nil {
+			return toolError(err, "Check MATRIZ_PROVIDER configuration."), GenerateDraftsOut{}, nil
+		}
+
+		count := in.Count
+		if count <= 0 {
+			count = 1
+		} else if count > 4 {
+			count = 4
+		}
+
+		w, h := parseAspectRatio(in.AspectRatio, cfg.DraftMaxEdge)
+
+		genReq := providers.GenerateRequest{
+			Prompt:         in.Prompt,
+			NegativePrompt: in.NegativePrompt,
+			Width:          w,
+			Height:         h,
+			Count:          count,
+			Seed:           in.Seed,
+			Model:          cfg.ModelDraft,
+		}
+
+		// Pre-flight budget guard check (§3.2 & §5.6)
+		estimatedCost := provider.EstimateCostUSD(genReq)
+		if err := guard.Reserve(estimatedCost); err != nil {
+			return toolError(err, "Deterministic operations via img_transform are free and do not require budget."), GenerateDraftsOut{}, nil
+		}
+
+		result, err := provider.Generate(ctx, genReq)
+		if err != nil {
+			return toolError(err, "Provider generation failed."), GenerateDraftsOut{}, nil
+		}
+
+		guard.Commit(result.CostUSD)
+
+		draftsDir := filepath.Join(cfg.ProjectRoot, "assets", "drafts")
+		_ = os.MkdirAll(draftsDir, 0755)
+
+		var assets []core.Asset
+		var seeds []int64
+		var contentList []mcp.Content
+
+		now := time.Now().UnixNano()
+
+		for i, imgBytes := range result.Images {
+			fileName := fmt.Sprintf("draft-%d-%d.png", now, i+1)
+			relRef := core.AssetRef(filepath.Join("assets", "drafts", fileName))
+			absPath, _ := core.ResolveRef(cfg.ProjectRoot, relRef)
+
+			_ = os.WriteFile(absPath, imgBytes, 0644)
+
+			sidecar := providers.BuildSidecar(relRef, provider.Name(), result, genReq)
+			_ = core.WriteSidecar(absPath, sidecar)
+
+			decoded, _, err := image.Decode(bytes.NewReader(imgBytes))
+			var thumb *mcp.ImageContent
+			if err == nil {
+				thumb, _ = thumbnailContent(decoded, 512)
+			}
+
+			if thumb != nil {
+				contentList = append(contentList, thumb)
+			}
+
+			assets = append(assets, core.Asset{
+				Ref:      relRef,
+				Origin:   core.OriginGenerated,
+				MIMEType: result.MIMEType,
+				Dims: core.Dimensions{
+					Width:  w,
+					Height: h,
+				},
+				Bytes: int64(len(imgBytes)),
+			})
+			seeds = append(seeds, result.Seed)
+		}
+
+		out := GenerateDraftsOut{
+			Drafts:     assets,
+			Seeds:      seeds,
+			CostUSD:    result.CostUSD,
+			BudgetLeft: guard.BudgetLeft(),
+		}
+
+		return &mcp.CallToolResult{
+			Content: contentList,
+		}, out, nil
+	}
+}
+
+type RefineIn struct {
+	Ref       string `json:"ref" jsonschema:"source asset reference to refine"`
+	Operation string `json:"operation" jsonschema:"inpaint, outpaint, or remove_background"`
+	Prompt    string `json:"prompt" jsonschema:"description of the desired edit"`
+	Mask      string `json:"mask,omitempty" jsonschema:"optional mask asset reference for inpainting"`
+	Output    string `json:"output" jsonschema:"project-relative path to write refined result"`
+	Seed      *int64 `json:"seed,omitempty" jsonschema:"optional seed"`
+}
+
+type RefineOut struct {
+	Asset      core.Asset `json:"asset"`
+	CostUSD    float64    `json:"cost_usd"`
+	BudgetLeft float64    `json:"budget_left_usd"`
+}
+
+func handleRefine(cfg *config.Config, reg *providers.Registry, guard *budget.Guard) mcp.ToolHandlerFor[RefineIn, RefineOut] {
+	return func(ctx context.Context, req *mcp.CallToolRequest, in RefineIn) (*mcp.CallToolResult, RefineOut, error) {
+		provider, err := reg.Get(cfg.Provider)
+		if err != nil {
+			return toolError(err, "Check MATRIZ_PROVIDER configuration."), RefineOut{}, nil
+		}
+
+		srcPath, err := core.ResolveRef(cfg.ProjectRoot, core.AssetRef(in.Ref))
+		if err != nil {
+			return toolError(err, "Check input ref path."), RefineOut{}, nil
+		}
+
+		srcBytes, err := os.ReadFile(srcPath)
+		if err != nil {
+			return toolError(err, "Source asset could not be read."), RefineOut{}, nil
+		}
+
+		var maskBytes []byte
+		if in.Mask != "" {
+			maskPath, err := core.ResolveRef(cfg.ProjectRoot, core.AssetRef(in.Mask))
+			if err == nil {
+				maskBytes, _ = os.ReadFile(maskPath)
+			}
+		}
+
+		editReq := providers.EditRequest{
+			Source:    srcBytes,
+			Mask:      maskBytes,
+			Prompt:    in.Prompt,
+			Operation: providers.Capability(in.Operation),
+			Seed:      in.Seed,
+			Model:     cfg.ModelFinal,
+		}
+
+		estimatedCost := provider.EstimateCostUSD(providers.GenerateRequest{
+			Model: cfg.ModelFinal,
+			Count: 1,
+		})
+
+		if err := guard.Reserve(estimatedCost); err != nil {
+			return toolError(err, "Deterministic operations via img_transform are free and do not require budget."), RefineOut{}, nil
+		}
+
+		result, err := provider.Edit(ctx, editReq)
+		if err != nil {
+			return toolError(err, "Provider edit failed."), RefineOut{}, nil
+		}
+
+		guard.Commit(result.CostUSD)
+
+		outRef := core.AssetRef(in.Output)
+		if outRef == "" {
+			outRef = core.AssetRef(fmt.Sprintf("assets/refined-%d.png", time.Now().UnixNano()))
+		}
+		outPath, err := core.ResolveRef(cfg.ProjectRoot, outRef)
+		if err != nil {
+			return toolError(err, "Invalid output path."), RefineOut{}, nil
+		}
+
+		_ = os.MkdirAll(filepath.Dir(outPath), 0755)
+		if len(result.Images) > 0 {
+			_ = os.WriteFile(outPath, result.Images[0], 0644)
+		}
+
+		decoded, _, _ := image.Decode(bytes.NewReader(result.Images[0]))
+		thumb, _ := thumbnailContent(decoded, 512)
+
+		asset := core.Asset{
+			Ref:      outRef,
+			Origin:   core.OriginGenerated,
+			MIMEType: result.MIMEType,
+			Dims: core.Dimensions{
+				Width:  decoded.Bounds().Dx(),
+				Height: decoded.Bounds().Dy(),
+			},
+			Bytes: int64(len(result.Images[0])),
+		}
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{thumb},
+		}, RefineOut{
+			Asset:      asset,
+			CostUSD:    result.CostUSD,
+			BudgetLeft: guard.BudgetLeft(),
+		}, nil
+	}
+}
+
+func parseAspectRatio(ratio string, maxEdge int) (int, int) {
+	if maxEdge <= 0 {
+		maxEdge = 768
+	}
+	switch ratio {
+	case "16:9":
+		return maxEdge, (maxEdge * 9) / 16
+	case "21:9":
+		return maxEdge, (maxEdge * 9) / 21
+	case "4:3":
+		return maxEdge, (maxEdge * 3) / 4
+	case "1:1":
+		return maxEdge, maxEdge
+	case "9:16":
+		return (maxEdge * 9) / 16, maxEdge
+	default:
+		return maxEdge, (maxEdge * 9) / 16
+	}
+}

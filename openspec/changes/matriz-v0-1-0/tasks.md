@@ -43,9 +43,9 @@ Chain strategy: stacked-to-main
 - [x] 2.3 REFACTOR: Verify offline determinism and budget ceiling enforcement
 
 ## Phase 3: MCP Server (PR-3)
-- [ ] 3.1 RED: Write `T-11` to `T-15` tool execution and thumbnail tests in `internal/mcpserver/`
-- [ ] 3.2 GREEN: Implement `cmd/matriz-mcp/main.go`, `tools_*.go`, `thumbnail.go`, and `errors.go`
-- [ ] 3.3 REFACTOR: Verify thumbnail sizes (<= 512px) and tool annotations
+- [x] 3.1 RED: Write `T-11` to `T-15` tool execution and thumbnail tests in `internal/mcpserver/`
+- [x] 3.2 GREEN: Implement `cmd/matriz-mcp/main.go`, `tools_*.go`, `thumbnail.go`, and `errors.go`
+- [x] 3.3 REFACTOR: Verify thumbnail sizes (<= 512px) and tool annotations
 
 ## Phase 4: Site Manifest Resource (PR-4)
 - [ ] 4.1 RED: Write `T-16`, `T-17`, `T-18` tests for manifest schema, scanner, and MCP resource

@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **PR-3 (MCP Server & Tools)**:
+  - Local stdio MCP server entrypoint (`cmd/matriz-mcp/main.go`).
+  - Five domain MCP tools: `img_list_models`, `img_transform`, `img_export_web`, `img_generate_drafts`, and `img_refine` (`internal/mcpserver/`).
+  - Standardized thumbnail preview generation with 512px max edge returned as `*mcp.ImageContent` (`internal/mcpserver/thumbnail.go`).
+  - Actionable error mapping returning `CallToolResult{IsError: true}` without breaking protocol stdio transport (`internal/mcpserver/errors.go`).
+  - Tools reference and decision table documentation in Spanish (`docs/tools.md`).
+  - Test assertions `T-11`, `T-12`, `T-13`, `T-14`, `T-15` passing.
 - **PR-2 (Providers, Gemini & Budget Guard)**:
   - Generative `Provider` interface, capabilities, and request/result structures (`internal/providers/provider.go`).
   - Thread-safe `Guard` enforcing pre-flight budget and call ceilings failing closed (`internal/budget/budget.go`).
