@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **PR-D2 (CLI Doctor Diagnostics Engine)**:
+  - Multi-probe diagnostics engine in `internal/doctor/` inspecting pure-Go image codecs, configuration, masked API keys, project manifest, and MCP client discovery.
 - **PR-D1 (CLI Version Package)**:
   - System and build metadata reporter `internal/version/` with plain text and JSON outputs.
 - **PR-5 (Curation TUI & Preview)**:
