@@ -30,6 +30,14 @@ func ProbeMCPClients(ctx context.Context) CheckResult {
 		}
 	}
 
+	// Check Antigravity / Gemini config
+	antigravityPath := filepath.Join(home, ".gemini", "config", "mcp_config.json")
+	if data, err := os.ReadFile(antigravityPath); err == nil {
+		if strings.Contains(string(data), "matriz") {
+			detected = append(detected, "Antigravity (configured)")
+		}
+	}
+
 	// Check Cursor config
 	cursorPath := filepath.Join(home, ".cursor", "mcp.json")
 	if data, err := os.ReadFile(cursorPath); err == nil {
