@@ -21,9 +21,10 @@ type FakeProvider struct {
 	outW, outH  int
 }
 
-// SetOutputSize forces every generated image to a fixed size regardless of the
-// dimensions a request asks for, mirroring providers that answer with their own
-// resolution instead of the one requested. Zero clears the override.
+// SetOutputSize forces every image produced by Generate or Edit to a fixed size
+// regardless of the dimensions a request asks for, mirroring providers that
+// answer with their own resolution instead of the one requested. Zero clears
+// the override.
 func (f *FakeProvider) SetOutputSize(w, h int) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -123,7 +124,14 @@ func (f *FakeProvider) Edit(ctx context.Context, req providers.EditRequest) (*pr
 		seed = *req.Seed
 	}
 
-	imgBytes, err := f.renderSolidImage(512, 512, req.Prompt, seed)
+	w, h := 512, 512
+	f.mu.Lock()
+	if f.outW > 0 && f.outH > 0 {
+		w, h = f.outW, f.outH
+	}
+	f.mu.Unlock()
+
+	imgBytes, err := f.renderSolidImage(w, h, req.Prompt, seed)
 	if err != nil {
 		return nil, fmt.Errorf("fake edit render failed: %w", err)
 	}

@@ -155,7 +155,8 @@ func handleRefine(cfg *config.Config, reg *providers.Registry, guard *budget.Gua
 			return toolError(err, "Check MATRIZ_PROVIDER configuration."), RefineOut{}, nil
 		}
 
-		srcPath, err := core.ResolveRef(cfg.ProjectRoot, core.AssetRef(in.Ref))
+		srcRef := core.AssetRef(in.Ref)
+		srcPath, err := core.ResolveRef(cfg.ProjectRoot, srcRef)
 		if err != nil {
 			return toolError(err, "Check input ref path."), RefineOut{}, nil
 		}
@@ -198,6 +199,16 @@ func handleRefine(cfg *config.Config, reg *providers.Registry, guard *budget.Gua
 
 		guard.Commit(result.CostUSD)
 
+		// A provider may answer without image bytes. Indexing Images[0] here
+		// would panic, and a panic in a stdio handler takes the server down
+		// instead of reaching the model (hard rule 7.9).
+		if len(result.Images) == 0 {
+			return toolError(
+				fmt.Errorf("provider %s returned no image for operation %q", provider.Name(), in.Operation),
+				"The provider accepted the request but produced no image. Try a simpler prompt, or a different operation.",
+			), RefineOut{}, nil
+		}
+
 		outRef := core.AssetRef(in.Output)
 		if outRef == "" {
 			outRef = core.AssetRef(fmt.Sprintf("assets/refined-%d.png", time.Now().UnixNano()))
@@ -207,27 +218,47 @@ func handleRefine(cfg *config.Config, reg *providers.Registry, guard *budget.Gua
 			return toolError(err, "Invalid output path."), RefineOut{}, nil
 		}
 
-		_ = os.MkdirAll(filepath.Dir(outPath), 0755)
-		if len(result.Images) > 0 {
-			_ = os.WriteFile(outPath, result.Images[0], 0644)
+		if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {
+			return toolError(err, "Failed to create the destination directory."), RefineOut{}, nil
+		}
+		if err := os.WriteFile(outPath, result.Images[0], 0644); err != nil {
+			return toolError(err, "Failed to write the refined image."), RefineOut{}, nil
 		}
 
-		decoded, _, _ := image.Decode(bytes.NewReader(result.Images[0]))
-		thumb, _ := thumbnailContent(decoded, 512)
+		// Decode before recording anything: an undecodable result must not take
+		// the handler down, and both the sidecar and the Asset describe the
+		// image that was produced.
+		var dims core.Dimensions
+		var thumb *mcp.ImageContent
+		if decoded, _, decErr := image.Decode(bytes.NewReader(result.Images[0])); decErr == nil {
+			dims = core.Dimensions{
+				Width:  decoded.Bounds().Dx(),
+				Height: decoded.Bounds().Dy(),
+			}
+			thumb, _ = thumbnailContent(decoded, 512)
+		}
+
+		// §5.4: every produced file writes its sidecar next to it. Refinement is
+		// the operation that spends money; without this its provenance -- the
+		// provider, model, prompt, seed and cost -- was lost the moment it ran.
+		sidecar := providers.BuildEditSidecar(outRef, provider.Name(), result, editReq, srcRef, dims)
+		_ = core.WriteSidecar(outPath, sidecar)
 
 		asset := core.Asset{
 			Ref:      outRef,
 			Origin:   core.OriginGenerated,
 			MIMEType: result.MIMEType,
-			Dims: core.Dimensions{
-				Width:  decoded.Bounds().Dx(),
-				Height: decoded.Bounds().Dy(),
-			},
-			Bytes: int64(len(result.Images[0])),
+			Dims:     dims,
+			Bytes:    int64(len(result.Images[0])),
+		}
+
+		var content []mcp.Content
+		if thumb != nil {
+			content = append(content, thumb)
 		}
 
 		return &mcp.CallToolResult{
-				Content: []mcp.Content{thumb},
+				Content: content,
 			}, RefineOut{
 				Asset:      asset,
 				CostUSD:    result.CostUSD,
