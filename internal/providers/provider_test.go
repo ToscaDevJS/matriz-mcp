@@ -121,12 +121,132 @@ func TestT10d_ResultWithoutSeed_ProducesUnseededSidecar(t *testing.T) {
 		Width:  768,
 		Height: 768,
 		Seed:   nil,
-	})
+	}, core.Dimensions{Width: 768, Height: 768})
 
 	if sidecar.Seed != 0 {
 		t.Errorf("expected seed 0, got %d", sidecar.Seed)
 	}
 	if seeded, ok := sidecar.Params["seeded"].(bool); !ok || seeded {
 		t.Errorf("expected params.seeded to be false, got %v", sidecar.Params["seeded"])
+	}
+}
+
+// TestBuildSidecar_AttributesPerImageCost covers batch cost attribution. A
+// Result carries the settled cost of the WHOLE batch, but BuildSidecar writes
+// one sidecar per image. Copying the batch total into each file would report
+// four times the real cost of a four-draft batch, and the sidecar is the
+// project's cost record (§5.4).
+func TestBuildSidecar_AttributesPerImageCost(t *testing.T) {
+	tests := []struct {
+		name      string
+		images    int
+		batchCost float64
+		want      float64
+	}{
+		{"four drafts share the batch cost", 4, 0.1344, 0.0336},
+		{"single draft carries the whole cost", 1, 0.0336, 0.0336},
+		{"two drafts", 2, 0.0672, 0.0336},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			images := make([][]byte, tt.images)
+			for i := range images {
+				images[i] = []byte("fake-image-bytes")
+			}
+
+			res := &providers.Result{
+				Images:   images,
+				MIMEType: "image/png",
+				Model:    "gemini-3.1-flash-lite-image",
+				CostUSD:  tt.batchCost,
+			}
+
+			sidecar := providers.BuildSidecar(
+				core.AssetRef("assets/drafts/draft-1.png"), "gemini", res,
+				providers.GenerateRequest{Prompt: "a barber chair", Count: tt.images},
+				core.Dimensions{Width: 1408, Height: 768},
+			)
+
+			if sidecar.CostUSD != tt.want {
+				t.Errorf("sidecar cost for 1 of %d images = %v, want %v",
+					tt.images, sidecar.CostUSD, tt.want)
+			}
+		})
+	}
+}
+
+// TestBuildSidecar_EmptyResultDoesNotPanic guards the degenerate case: a Result
+// with no images must not divide by zero.
+func TestBuildSidecar_EmptyResultDoesNotPanic(t *testing.T) {
+	res := &providers.Result{
+		Images:  nil,
+		Model:   "gemini-3.1-flash-lite-image",
+		CostUSD: 0.0336,
+	}
+
+	sidecar := providers.BuildSidecar(
+		core.AssetRef("assets/drafts/draft-1.png"), "gemini", res,
+		providers.GenerateRequest{Prompt: "a barber chair"},
+		core.Dimensions{Width: 1408, Height: 768},
+	)
+
+	if sidecar.CostUSD != 0.0336 {
+		t.Errorf("sidecar cost for an empty result = %v, want the unsplit cost 0.0336", sidecar.CostUSD)
+	}
+}
+
+// TestBuildSidecar_RecordsProducedDimensions covers the reproducibility bug: the
+// sidecar recorded the dimensions that were REQUESTED, not the ones the provider
+// produced. Gemini answered a 768x432 request with a 1408x768 image, so every
+// .meta.json on disk described a file that did not exist at that size. The
+// sidecar is the reproducibility record (§5.4); it documents the result.
+func TestBuildSidecar_RecordsProducedDimensions(t *testing.T) {
+	res := &providers.Result{
+		Images:   [][]byte{[]byte("fake-image-bytes")},
+		MIMEType: "image/png",
+		Model:    "gemini-3.1-flash-lite-image",
+		CostUSD:  0.0336,
+	}
+
+	// Requested 768x432; the provider produced 1408x768.
+	sidecar := providers.BuildSidecar(
+		core.AssetRef("assets/drafts/draft-1.png"), "gemini", res,
+		providers.GenerateRequest{Prompt: "a barber chair", Width: 768, Height: 432},
+		core.Dimensions{Width: 1408, Height: 768},
+	)
+
+	if got := sidecar.Params["width"]; got != 1408 {
+		t.Errorf("params.width = %v, want 1408 (produced), not 768 (requested)", got)
+	}
+	if got := sidecar.Params["height"]; got != 768 {
+		t.Errorf("params.height = %v, want 768 (produced), not 432 (requested)", got)
+	}
+}
+
+// TestBuildSidecar_OmitsUnknownDimensions pins the honest fallback: when the
+// produced image could not be decoded, the sidecar records no dimensions rather
+// than inventing the requested ones.
+func TestBuildSidecar_OmitsUnknownDimensions(t *testing.T) {
+	res := &providers.Result{
+		Images:  [][]byte{[]byte("undecodable")},
+		Model:   "gemini-3.1-flash-lite-image",
+		CostUSD: 0.0336,
+	}
+
+	sidecar := providers.BuildSidecar(
+		core.AssetRef("assets/drafts/draft-1.png"), "gemini", res,
+		providers.GenerateRequest{Prompt: "a barber chair", Width: 768, Height: 432},
+		core.Dimensions{},
+	)
+
+	if _, present := sidecar.Params["width"]; present {
+		t.Errorf("params.width = %v, want the key absent when dimensions are unknown", sidecar.Params["width"])
+	}
+	if _, present := sidecar.Params["height"]; present {
+		t.Errorf("params.height = %v, want the key absent when dimensions are unknown", sidecar.Params["height"])
+	}
+	if seeded, ok := sidecar.Params["seeded"].(bool); !ok || seeded {
+		t.Error("params.seeded must survive even when dimensions are unknown")
 	}
 }

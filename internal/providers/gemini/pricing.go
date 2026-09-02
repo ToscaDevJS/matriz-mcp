@@ -50,18 +50,7 @@ func (p *PricingTable) EstimateCostUSD(req providers.GenerateRequest) float64 {
 
 	modelLower := strings.ToLower(req.Model)
 
-	// Determine resolution tier
-	maxEdge := req.Width
-	if req.Height > maxEdge {
-		maxEdge = req.Height
-	}
-
-	resTier := "1k"
-	if maxEdge > 2048 {
-		resTier = "4k"
-	} else if maxEdge > 1024 {
-		resTier = "2k"
-	}
+	resTier := resolutionTier(req.Width, req.Height)
 
 	var modelTier string
 	if strings.Contains(modelLower, "lite") || strings.Contains(modelLower, "flash") {
@@ -81,4 +70,23 @@ func (p *PricingTable) EstimateCostUSD(req providers.GenerateRequest) float64 {
 
 	// Hard rule 7.12 & 5.15: Fallback to worst-case price, never zero
 	return p.WorstCaseCostUSD(count)
+}
+
+// resolutionTier maps a request's long edge onto the provider's size tiers.
+// Pricing and the wire config both read it on purpose: asking the API for 2K
+// while charging the 1K rate would settle the budget below what the call cost.
+func resolutionTier(width, height int) string {
+	maxEdge := width
+	if height > maxEdge {
+		maxEdge = height
+	}
+
+	switch {
+	case maxEdge > 2048:
+		return "4k"
+	case maxEdge > 1024:
+		return "2k"
+	default:
+		return "1k"
+	}
 }

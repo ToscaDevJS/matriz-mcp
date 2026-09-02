@@ -62,12 +62,27 @@ type Provider interface {
 }
 
 // BuildSidecar constructs a sidecar struct for a generative result according to §5.4 & §5.15.
-func BuildSidecar(ref core.AssetRef, providerName string, res *Result, req GenerateRequest) *core.Sidecar {
+func BuildSidecar(ref core.AssetRef, providerName string, res *Result, req GenerateRequest, dims core.Dimensions) *core.Sidecar {
 	seeded := (req.Seed != nil && res.Seed != 0)
 	params := map[string]any{
-		"width":  req.Width,
-		"height": req.Height,
 		"seeded": seeded,
+	}
+
+	// The sidecar documents the file that was produced, not the one that was
+	// requested: image providers routinely answer with their own resolution.
+	// Unknown dimensions are omitted rather than back-filled from the request,
+	// which would put a size on disk that no file ever had (§5.4).
+	if dims.Width > 0 && dims.Height > 0 {
+		params["width"] = dims.Width
+		params["height"] = dims.Height
+	}
+
+	// A Result carries the settled cost of the whole batch, but this sidecar
+	// documents a single image out of it. Copying the batch total into every
+	// file would overstate the project's cost record N-fold (§5.4).
+	costUSD := res.CostUSD
+	if n := len(res.Images); n > 1 {
+		costUSD /= float64(n)
 	}
 
 	return &core.Sidecar{
@@ -81,6 +96,6 @@ func BuildSidecar(ref core.AssetRef, providerName string, res *Result, req Gener
 		NegativePrompt: req.NegativePrompt,
 		Seed:           res.Seed,
 		Params:         params,
-		CostUSD:        res.CostUSD,
+		CostUSD:        costUSD,
 	}
 }

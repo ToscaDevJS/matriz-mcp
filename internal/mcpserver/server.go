@@ -18,8 +18,8 @@ type ServerContext struct {
 
 // Tool definitions with exact descriptions and hints (§5.5).
 var (
-	destrFalse    = false
-	openWorldTrue = true
+	destrFalse     = false
+	openWorldTrue  = true
 	openWorldFalse = false
 
 	ToolListModels = &mcp.Tool{
@@ -109,18 +109,36 @@ func RegisterTools(srv *mcp.Server, cfg *config.Config, reg *providers.Registry,
 func CallTransform(ctx context.Context, cfg *config.Config, in TransformIn) (*mcp.CallToolResult, error) {
 	handler := handleTransform(cfg)
 	res, out, err := handler(ctx, &mcp.CallToolRequest{}, in)
-	if res == nil && err == nil {
-		res = &mcp.CallToolResult{StructuredContent: out}
+	if err != nil {
+		return res, err
 	}
-	return res, err
+	if res == nil {
+		res = &mcp.CallToolResult{}
+	}
+	// The handler returns content and structured output separately; the real
+	// SDK merges them. Attach it here too, otherwise callers can only assert on
+	// the thumbnail and the tool's actual result is invisible.
+	if res.StructuredContent == nil {
+		res.StructuredContent = out
+	}
+	return res, nil
 }
 
 // CallGenerateDrafts executes img_generate_drafts handler directly for testing.
 func CallGenerateDrafts(ctx context.Context, cfg *config.Config, reg *providers.Registry, guard *budget.Guard, in GenerateDraftsIn) (*mcp.CallToolResult, error) {
 	handler := handleGenerateDrafts(cfg, reg, guard)
 	res, out, err := handler(ctx, &mcp.CallToolRequest{}, in)
-	if res == nil && err == nil {
-		res = &mcp.CallToolResult{StructuredContent: out}
+	if err != nil {
+		return res, err
 	}
-	return res, err
+	if res == nil {
+		res = &mcp.CallToolResult{}
+	}
+	// The handler returns content and structured output separately; the real
+	// SDK merges them. Attach it here too, otherwise callers can only assert on
+	// the thumbnail and the tool's actual result is invisible.
+	if res.StructuredContent == nil {
+		res.StructuredContent = out
+	}
+	return res, nil
 }
