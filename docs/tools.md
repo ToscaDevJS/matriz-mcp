@@ -1,6 +1,6 @@
 # Herramientas MCP de Matriz
 
-Matriz expone cinco herramientas estructuradas agrupadas bajo el prefijo `img_`.
+Matriz expone cuatro herramientas estructuradas agrupadas bajo el prefijo `img_`.
 
 ## Tabla de decisión: generativo vs determinista
 
@@ -9,8 +9,7 @@ Matriz expone cinco herramientas estructuradas agrupadas bajo el prefijo `img_`.
 | Recortar, encuadrar de nuevo | `img_transform` | 0 |
 | Cambiar tamaño | `img_transform` | 0 |
 | Corregir luz, contraste, saturación | `img_transform` | 0 |
-| Convertir a WebP/AVIF | `img_export_web` | 0 |
-| Generar variantes responsive y `srcset` | `img_export_web` | 0 |
+| Convertir a WebP/AVIF | `img_transform` | 0 |
 | Rotar, enderezar | `img_transform` | 0 |
 | Crear una imagen que no existe | `img_generate_drafts` | **paga** |
 | Quitar o sustituir el fondo | `img_refine` | **paga** |
@@ -25,11 +24,7 @@ Matriz expone cinco herramientas estructuradas agrupadas bajo el prefijo `img_`.
 
 ### `img_transform`
 - **Coste**: Gratuito (0) e instantáneo.
-- **Uso**: Operaciones locales de transformación (recorte, redimensionado, ajustes de brillo/contraste/saturación, rotación y enfoque) sin conexión a la red.
-
-### `img_export_web`
-- **Coste**: Gratuito (0) e instantáneo.
-- **Uso**: Genera variantes responsive optimizadas (AVIF y WebP) para los anchos estándar `[420, 768, 1024, 1440, 1920]` sin exceder el ancho original y genera el `srcset` correspondiente.
+- **Uso**: Operaciones locales de transformación (recorte, redimensionado, ajustes de brillo/contraste/saturación, rotación y enfoque) sin conexión a la red. El formato de salida se deduce de la extensión de `output`, por lo que también cubre la conversión a JPEG, PNG, WebP y AVIF.
 
 ### `img_generate_drafts`
 - **Coste**: De pago (facturado por tokens del proveedor).

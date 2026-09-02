@@ -6,7 +6,7 @@ Provides a terminal user interface for asset inspection, curation, and local HTM
 ## Requirements
 
 ### Requirement: TUI Model Initialization & Navigation
-The system MUST construct an interactive Bubbletea model from a manifest and support navigation keys (arrow keys, enter, export, quit).
+The system MUST construct an interactive Bubbletea model from a manifest and support navigation keys (arrow keys, enter, quit).
 
 #### Scenario: Model construction from test fixture
 - GIVEN a valid fixture manifest in `testdata/`

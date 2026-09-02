@@ -4,11 +4,10 @@ import "github.com/charmbracelet/bubbles/key"
 
 // KeyMap defines keybindings for the curation TUI.
 type KeyMap struct {
-	Up     key.Binding
-	Down   key.Binding
-	Enter  key.Binding
-	Export key.Binding
-	Quit   key.Binding
+	Up    key.Binding
+	Down  key.Binding
+	Enter key.Binding
+	Quit  key.Binding
 }
 
 // DefaultKeyMap returns the default keyboard shortcuts.
@@ -24,10 +23,6 @@ var DefaultKeyMap = KeyMap{
 	Enter: key.NewBinding(
 		key.WithKeys("enter"),
 		key.WithHelp("enter", "open html preview"),
-	),
-	Export: key.NewBinding(
-		key.WithKeys("e"),
-		key.WithHelp("e", "export web variants"),
 	),
 	Quit: key.NewBinding(
 		key.WithKeys("q", "esc", "ctrl+c"),

@@ -7,7 +7,7 @@
 
 > **Deterministic and Generative Image Pipeline for Autonomous Web Engineering Agents.**
 
-**Matriz** is a local-first Model Context Protocol (MCP) server, interactive Curation TUI, and responsive export pipeline built in Go. It empowers AI coding agents (Claude Desktop, Cursor, Antigravity, Windsurf) to inspect, transform, generate, and optimize web assets without human intervention, context-window bloat, or uncontrolled cloud spend.
+**Matriz** is a local-first Model Context Protocol (MCP) server, interactive Curation TUI, and deterministic image pipeline built in Go. It empowers AI coding agents (Claude Desktop, Cursor, Antigravity, Windsurf) to inspect, transform, generate, and optimize web assets without human intervention, context-window bloat, or uncontrolled cloud spend.
 
 ---
 
@@ -34,7 +34,7 @@ flowchart TD
 ```
 
 1. **Client Assets are Sacred**: Original client assets (`origin: client`) are immutable. They are never overwritten, mutated in-place, or deleted.
-2. **Determinism is Free (0 Cost)**: Any operation that can be solved locally with standard algorithms (crops, resizes, color correction, format conversion, `srcset` generation) is executed locally in microseconds at zero financial cost.
+2. **Determinism is Free (0 Cost)**: Any operation that can be solved locally with standard algorithms (crops, resizes, color correction, format conversion) is executed locally in microseconds at zero financial cost.
 3. **Generative Operations Cost Money**: Model calls (Gemini) are strictly reserved for generating novel pixels (drafts, inpainting, outpainting, background removal) and are guarded by a fail-closed pre-flight budget guard.
 4. **Zero CGo / Pure Go & WASM**: Modern image codecs (AVIF, WebP, JPEG, PNG) run cleanly without requiring system C libraries or dynamic linking.
 5. **No Context Pollution**: High-resolution image bytes never cross the stdio MCP protocol stream. The server generates compact thumbnail previews (max 512px) embedded directly into `ImageContent` responses.
@@ -128,7 +128,7 @@ All MCP tools are grouped under the `img_` prefix:
 | Resize / Scale | `img_transform` | ❌ No | **FREE ($0.00)** |
 | Brightness / Contrast / Saturation | `img_transform` | ❌ No | **FREE ($0.00)** |
 | Rotate / Sharpen | `img_transform` | ❌ No | **FREE ($0.00)** |
-| Responsive AVIF/WebP Variants & `srcset` | `img_export_web` | ❌ No | **FREE ($0.00)** |
+| Convert to AVIF / WebP / JPEG / PNG | `img_transform` | ❌ No | **FREE ($0.00)** |
 | Generate new image drafts from prompt | `img_generate_drafts` | ✅ Yes | **Paid (Tokens)** |
 | Inpaint / Outpaint / Remove background | `img_refine` | ✅ Yes | **Paid (Tokens)** |
 | Inspect active provider & budget | `img_list_models` | ❌ No | **FREE ($0.00)** |
@@ -202,7 +202,7 @@ Add Matriz to your workspace or global MCP settings (`~/.cursor/mcp.json`):
 1. **Always Read the Manifest First**: Direct your LLM prompts to inspect `matriz://project/manifest` before generating drafts. This ensures correct aspect ratios (`21:9`, `16:9`) and prevents aspect ratio mismatches.
 2. **Favor Deterministic Transformations**: Never use `img_refine` for contrast, cropping, or resizing. `img_transform` is instantaneous, 100% deterministic, offline, and free.
 3. **Use Drafts Before Final Refinements**: Generate 3–4 draft variations at low resolution (max 768px) with `img_generate_drafts`, review the embedded thumbnail previews, and refine only the chosen candidate.
-4. **Leverage Dual-Format Responsive Export**: Running `img_export_web` automatically caps variant widths at the source asset's native resolution, preventing upscaling artifacts while delivering production-ready AVIF/WebP `srcset` strings.
+4. **Pick the Output Format via the Extension**: `img_transform` infers the encoder from the `output` path extension, so writing to `.avif` or `.webp` converts the asset in the same free, deterministic pass as the crop or resize.
 
 ---
 

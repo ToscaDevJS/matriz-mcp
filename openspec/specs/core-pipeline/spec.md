@@ -1,7 +1,7 @@
 # Core Pipeline Specification
 
 ## Purpose
-Provides asset domain types, safe path resolution, deterministic image transformation, multi-format encoding, responsive web export, and sidecar metadata persistence.
+Provides asset domain types, safe path resolution, deterministic image transformation, multi-format encoding, and sidecar metadata persistence.
 
 ## Requirements
 
@@ -38,14 +38,6 @@ The system MUST encode images to JPEG, PNG, WebP, and AVIF formats without requi
 - GIVEN an in-memory image
 - WHEN encoded to WebP or AVIF with quality parameters
 - THEN a valid byte stream for the target format is produced
-
-### Requirement: Responsive Web Export
-The system MUST generate a set of responsive image variants for default widths `[420, 768, 1024, 1440, 1920]` capped at the original image width, and MUST return a properly formatted HTML `srcset` string.
-
-#### Scenario: Export variants for medium-sized image
-- GIVEN an original image of width 900px
-- WHEN `ExportWeb` is executed
-- THEN it generates variants only for widths `420` and `768`, and returns an ascending `srcset` list
 
 ### Requirement: Sidecar Metadata Management
 The system MUST write and read a `.meta.json` sidecar alongside every produced asset conforming to the `matriz.sidecar/v1` schema.

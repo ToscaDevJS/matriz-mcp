@@ -175,7 +175,7 @@ func TestT15_ToolDescriptions_CostMarkers(t *testing.T) {
 			if !strings.HasPrefix(tool.Description, "COSTS MONEY") {
 				t.Errorf("tool %s description must start with COSTS MONEY, got %q", tool.Name, tool.Description)
 			}
-		case "img_transform", "img_export_web":
+		case "img_transform":
 			if !strings.HasPrefix(tool.Description, "FREE") {
 				t.Errorf("tool %s description must start with FREE, got %q", tool.Name, tool.Description)
 			}

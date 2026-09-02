@@ -46,19 +46,6 @@ var (
 		},
 	}
 
-	ToolExportWeb = &mcp.Tool{
-		Name: "img_export_web",
-		Description: "FREE and instant, no model call. Generates responsive web image variants " +
-			"(AVIF, WebP) and produces ready-to-use HTML srcset strings.",
-		Annotations: &mcp.ToolAnnotations{
-			ReadOnlyHint:    false,
-			DestructiveHint: &destrFalse,
-			IdempotentHint:  true,
-			OpenWorldHint:   &openWorldFalse,
-			Title:           "Export Web Variants",
-		},
-	}
-
 	ToolGenerateDrafts = &mcp.Tool{
 		Name: "img_generate_drafts",
 		Description: "COSTS MONEY and takes seconds. Generates N new draft images from " +
@@ -93,7 +80,6 @@ func GetToolDefinitions() []*mcp.Tool {
 	return []*mcp.Tool{
 		ToolListModels,
 		ToolTransform,
-		ToolExportWeb,
 		ToolGenerateDrafts,
 		ToolRefine,
 	}
@@ -111,11 +97,10 @@ func NewServer(cfg *config.Config, reg *providers.Registry, guard *budget.Guard)
 	return srv
 }
 
-// RegisterTools registers all 5 image management tools.
+// RegisterTools registers all 4 image management tools.
 func RegisterTools(srv *mcp.Server, cfg *config.Config, reg *providers.Registry, guard *budget.Guard) {
 	mcp.AddTool(srv, ToolListModels, handleListModels(cfg, reg, guard))
 	mcp.AddTool(srv, ToolTransform, handleTransform(cfg))
-	mcp.AddTool(srv, ToolExportWeb, handleExportWeb(cfg))
 	mcp.AddTool(srv, ToolGenerateDrafts, handleGenerateDrafts(cfg, reg, guard))
 	mcp.AddTool(srv, ToolRefine, handleRefine(cfg, reg, guard))
 }
@@ -123,16 +108,6 @@ func RegisterTools(srv *mcp.Server, cfg *config.Config, reg *providers.Registry,
 // CallTransform executes img_transform handler directly for testing.
 func CallTransform(ctx context.Context, cfg *config.Config, in TransformIn) (*mcp.CallToolResult, error) {
 	handler := handleTransform(cfg)
-	res, out, err := handler(ctx, &mcp.CallToolRequest{}, in)
-	if res == nil && err == nil {
-		res = &mcp.CallToolResult{StructuredContent: out}
-	}
-	return res, err
-}
-
-// CallExportWeb executes img_export_web handler directly for testing.
-func CallExportWeb(ctx context.Context, cfg *config.Config, in ExportWebIn) (*mcp.CallToolResult, error) {
-	handler := handleExportWeb(cfg)
 	res, out, err := handler(ctx, &mcp.CallToolRequest{}, in)
 	if res == nil && err == nil {
 		res = &mcp.CallToolResult{StructuredContent: out}

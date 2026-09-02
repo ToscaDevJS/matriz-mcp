@@ -35,7 +35,7 @@ El manifiesto de proyecto proporciona contexto unificado sobre los slots visuale
 ## Reglas de procedencia (`origin`)
 - **`client`**: Material original enviado por el cliente. Jamás se modifica ni elimina in-place.
 - **`generated`**: Generado mediante modelos generativos de IA (Gemini).
-- **`derived`**: Producido mediante transformaciones deterministas (filtros, recortes, variantes responsive).
+- **`derived`**: Producido mediante transformaciones deterministas (filtros, recortes, conversiones de formato).
 
 ## Acceso MCP Resource
 El manifiesto se expone en la URI:

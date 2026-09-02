@@ -51,9 +51,9 @@ cmd/matriz-tui   ─┘                └──→ internal/budget
   no business logic. `internal/core` never imports `cmd/` or `internal/mcpserver`
   — the dependency runs one way only.
 - **Deterministic vs generative is the central split.** Crop / resize / adjust /
-  encode / responsive variants are local, free and reproducible
-  (`img_transform`, `img_export_web`). Generation, inpaint, outpaint, background
-  removal cost money and take seconds (`img_generate_drafts`, `img_refine`).
+  encode are local, free and reproducible (`img_transform`). Generation,
+  inpaint, outpaint, background removal cost money and take seconds
+  (`img_generate_drafts`, `img_refine`).
   The split is visible in tool names and descriptions: generative descriptions
   start with `COSTS MONEY`, deterministic ones with `FREE` (test T-15 greps for it).
 - **Providers are swappable.** The core only knows the `Provider` interface

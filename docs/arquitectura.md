@@ -5,7 +5,7 @@ Matriz es un servidor MCP local (transporte stdio) y visor TUI en Go para gestio
 ## Los seis principios de diseño
 
 ### P1 — Separación estricta entre generativo y determinista
-Recortar, redimensionar, ajustar brillo/contraste/saturación, convertir formato y generar variantes responsive son operaciones deterministas: se hacen con librerías locales en Go/WASM, son gratuitas, instantáneas y reproducibles. Generar contenido nuevo, inpainting, quitar fondo y expandir encuadre son operaciones generativas: cuestan dinero, tardan segundos y no son reproducibles salvo por seed. Las herramientas y descripciones separan taxativamente ambas clases para impedir gastos accidentales.
+Recortar, redimensionar, ajustar brillo/contraste/saturación y convertir formato son operaciones deterministas: se hacen con librerías locales en Go/WASM, son gratuitas, instantáneas y reproducibles. Generar contenido nuevo, inpainting, quitar fondo y expandir encuadre son operaciones generativas: cuestan dinero, tardan segundos y no son reproducibles salvo por seed. Las herramientas y descripciones separan taxativamente ambas clases para impedir gastos accidentales.
 
 ### P2 — El modelo tiene que poder ver el resultado
 Toda herramienta que produce o modifica una imagen devuelve una miniatura visual (`ImageContent` con lado mayor ≤ 512 px) además de los metadatos estructurados. El archivo a resolución completa se conserva en disco referenciado mediante un `AssetRef`.

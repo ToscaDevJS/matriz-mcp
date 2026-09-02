@@ -14,7 +14,7 @@ The system MUST run exclusively over MCP `StdioTransport` without writing debug 
 - THEN it initializes tools and resources and communicates purely via JSON-RPC on stdio
 
 ### Requirement: Image Management Tools
-The system MUST expose 5 tools: `img_list_models`, `img_transform`, `img_export_web`, `img_generate_drafts`, and `img_refine`, with deterministic tools marked `FREE` and generative tools marked `COSTS MONEY`.
+The system MUST expose 4 tools: `img_list_models`, `img_transform`, `img_generate_drafts`, and `img_refine`, with deterministic tools marked `FREE` and generative tools marked `COSTS MONEY`.
 
 #### Scenario: Generative tool description verification
 - GIVEN the tool registry

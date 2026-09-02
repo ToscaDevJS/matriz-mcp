@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **`img_export_web` MCP tool** and its supporting pipeline
+  (`internal/core/export.go`) — cut before the v0.1.0 release. AVIF encoding via
+  `gen2brain/avif` (libaom on wazero) measured 62s for the 420/768/1024w set
+  against 30ms for the same widths in WebP, which made responsive export
+  unusable during draft iteration.
+- **`srcset` string generation**, which had no consumer outside
+  `img_export_web`. Single-width resize and format conversion remain available
+  through `img_transform`, which infers the output format from the output file
+  extension.
+
 ### Added
 - **PR-D3 (Unified CLI & SDD Complete)**:
   - Unified CLI binary `cmd/matriz/main.go` supporting `doctor`, `version`, `mcp`, `tui`, and `help`.
@@ -30,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Test assertions `T-16`, `T-17`, `T-18` passing.
 - **PR-3 (MCP Server & Tools)**:
   - Local stdio MCP server entrypoint (`cmd/matriz-mcp/main.go`).
-  - Five domain MCP tools: `img_list_models`, `img_transform`, `img_export_web`, `img_generate_drafts`, and `img_refine` (`internal/mcpserver/`).
+  - Four domain MCP tools: `img_list_models`, `img_transform`, `img_generate_drafts`, and `img_refine` (`internal/mcpserver/`).
   - Standardized thumbnail preview generation with 512px max edge returned as `*mcp.ImageContent` (`internal/mcpserver/thumbnail.go`).
   - Actionable error mapping returning `CallToolResult{IsError: true}` without breaking protocol stdio transport (`internal/mcpserver/errors.go`).
   - Tools reference and decision table documentation in Spanish (`docs/tools.md`).
