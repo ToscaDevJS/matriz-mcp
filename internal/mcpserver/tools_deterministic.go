@@ -17,16 +17,16 @@ import (
 )
 
 type TransformIn struct {
-	Ref        string         `json:"ref" jsonschema:"project-relative path of the source asset"`
-	Crop       *core.CropBox  `json:"crop,omitempty" jsonschema:"optional crop box in pixels"`
-	Width      int            `json:"width,omitempty" jsonschema:"target width in px; 0 keeps source width"`
-	Height     int            `json:"height,omitempty" jsonschema:"target height in px; 0 preserves aspect ratio"`
-	Brightness float64        `json:"brightness,omitempty" jsonschema:"-100..100, 0 is no change"`
-	Contrast   float64        `json:"contrast,omitempty" jsonschema:"-100..100, 0 is no change"`
-	Saturation float64        `json:"saturation,omitempty" jsonschema:"-100..100, 0 is no change"`
-	Rotate     float64        `json:"rotate,omitempty" jsonschema:"rotation angle in degrees clockwise"`
-	Sharpen    float64        `json:"sharpen,omitempty" jsonschema:"sharpen sigma factor; 0 is no sharpening"`
-	Output     string         `json:"output" jsonschema:"project-relative path to write the result"`
+	Ref        string        `json:"ref" jsonschema:"project-relative path of the source asset"`
+	Crop       *core.CropBox `json:"crop,omitempty" jsonschema:"optional crop box in pixels"`
+	Width      int           `json:"width,omitempty" jsonschema:"target width in px; 0 keeps source width"`
+	Height     int           `json:"height,omitempty" jsonschema:"target height in px; 0 preserves aspect ratio"`
+	Brightness float64       `json:"brightness,omitempty" jsonschema:"-100..100, 0 is no change"`
+	Contrast   float64       `json:"contrast,omitempty" jsonschema:"-100..100, 0 is no change"`
+	Saturation float64       `json:"saturation,omitempty" jsonschema:"-100..100, 0 is no change"`
+	Rotate     float64       `json:"rotate,omitempty" jsonschema:"rotation angle in degrees clockwise"`
+	Sharpen    float64       `json:"sharpen,omitempty" jsonschema:"sharpen sigma factor; 0 is no sharpening"`
+	Output     string        `json:"output" jsonschema:"project-relative path to write the result"`
 }
 
 type TransformOut struct {

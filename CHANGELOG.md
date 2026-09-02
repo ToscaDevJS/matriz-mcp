@@ -18,6 +18,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   through `img_transform`, which infers the output format from the output file
   extension.
 
+### Fixed
+- **`img_generate_drafts` charged the budget for drafts it never delivered.**
+  Gemini answered a `count: 4` request with a single image while the guard was
+  debited for four. The settled cost is now derived from the images actually
+  returned; the pre-flight reservation still prices the full request so the
+  guard keeps failing closed (hard rule 7.11).
+- **`count` never reached the Gemini API.** `CandidateCount` is now set from the
+  requested draft count, so a four-draft request asks the model for four
+  candidates instead of silently degrading to one.
+- **Every sidecar in a multi-draft batch recorded the whole batch cost.** A
+  `.meta.json` now records that image's share of the batch, not the total.
+- **The requested shape never reached the Gemini API.** `ImageConfig` is now
+  sent with the aspect ratio and resolution tier derived from the request, so a
+  `16:9` draft is actually asked for as `16:9`. The tier is shared with the
+  pricing table so the size requested and the size charged cannot drift apart.
+- **Sidecars and returned assets recorded requested dimensions, not produced
+  ones.** Gemini answered a 768x432 request with a 1408x768 image while every
+  `.meta.json` claimed 768x432, and the model was handed the same wrong size to
+  fit slots against. Both now describe the decoded file; when an image cannot be
+  decoded the dimensions are omitted rather than back-filled from the request.
+- **`CallTransform` and `CallGenerateDrafts` dropped the tool's structured
+  output** whenever a result carried thumbnail content, leaving tests able to
+  assert only on the preview.
+
 ### Added
 - **PR-D3 (Unified CLI & SDD Complete)**:
   - Unified CLI binary `cmd/matriz/main.go` supporting `doctor`, `version`, `mcp`, `tui`, and `help`.

@@ -3,6 +3,8 @@ package gemini
 import (
 	"context"
 	"fmt"
+	"math"
+	"strings"
 
 	"github.com/toscodevjs/matriz/internal/providers"
 	"google.golang.org/genai"
@@ -93,16 +95,7 @@ func (g *GeminiProvider) Generate(ctx context.Context, req providers.GenerateReq
 		},
 	}
 
-	cfg := &genai.GenerateContentConfig{
-		ResponseModalities: []string{"IMAGE"},
-	}
-
-	if req.Seed != nil {
-		seed32 := int32(*req.Seed)
-		cfg.Seed = &seed32
-	}
-
-	resp, err := g.client.Models.GenerateContent(ctx, modelID, contents, cfg)
+	resp, err := g.client.Models.GenerateContent(ctx, modelID, contents, buildGenerateConfig(req))
 	if err != nil {
 		return nil, fmt.Errorf("gemini generation failed: %w", err)
 	}
@@ -132,15 +125,53 @@ func (g *GeminiProvider) Generate(ctx context.Context, req providers.GenerateReq
 		seed = *req.Seed
 	}
 
-	costUSD := g.pricingTable.EstimateCostUSD(req)
-
 	return &providers.Result{
 		Images:   images,
 		MIMEType: mimeType,
 		Seed:     seed,
 		Model:    modelID,
-		CostUSD:  costUSD,
+		CostUSD:  g.settledCostUSD(req, len(images)),
 	}, nil
+}
+
+// buildGenerateConfig translates a provider-agnostic request into Gemini's wire
+// config. Count maps to CandidateCount: a caller asking for N drafts must ask
+// the model for N candidates, otherwise the request silently degrades to one.
+func buildGenerateConfig(req providers.GenerateRequest) *genai.GenerateContentConfig {
+	count := req.Count
+	if count <= 0 {
+		count = 1
+	}
+
+	cfg := &genai.GenerateContentConfig{
+		ResponseModalities: []string{"IMAGE"},
+		CandidateCount:     int32(count),
+		// The image models take a ratio and a size tier, never a pixel size.
+		// Sending neither is what made a 16:9 request come back as 1408x768.
+		ImageConfig: &genai.ImageConfig{
+			AspectRatio: nearestAspectRatio(req.Width, req.Height),
+			ImageSize:   strings.ToUpper(resolutionTier(req.Width, req.Height)),
+		},
+	}
+
+	// Hard rule 7.12: seeds are never invented. Absent a caller-supplied seed the
+	// field stays unset and the provider reports back whatever it used.
+	if req.Seed != nil {
+		seed32 := int32(*req.Seed)
+		cfg.Seed = &seed32
+	}
+
+	return cfg
+}
+
+// settledCostUSD prices a finished generation by the number of images actually
+// returned. EstimateCostUSD deliberately prices the full requested count so the
+// budget guard can fail closed before spending (hard rule 7.11); once the call
+// has returned, charging for undelivered images would burn budget on nothing.
+func (g *GeminiProvider) settledCostUSD(req providers.GenerateRequest, imagesReturned int) float64 {
+	settled := req
+	settled.Count = imagesReturned
+	return g.pricingTable.EstimateCostUSD(settled)
 }
 
 // Edit invokes Gemini image editing / multimodal refinement.
@@ -231,4 +262,40 @@ func (g *GeminiProvider) Edit(ctx context.Context, req providers.EditRequest) (*
 		Model:    modelID,
 		CostUSD:  costUSD,
 	}, nil
+}
+
+// geminiAspectRatios lists the ratios the image models accept.
+var geminiAspectRatios = []struct {
+	label string
+	value float64
+}{
+	{"1:1", 1.0},
+	{"2:3", 2.0 / 3.0},
+	{"3:2", 3.0 / 2.0},
+	{"3:4", 3.0 / 4.0},
+	{"4:3", 4.0 / 3.0},
+	{"9:16", 9.0 / 16.0},
+	{"16:9", 16.0 / 9.0},
+	{"21:9", 21.0 / 9.0},
+}
+
+// nearestAspectRatio maps requested pixel dimensions onto the closest ratio the
+// model accepts. The MCP layer resolves the caller's ratio into pixels so the
+// pricing table can pick a tier, so the provider recovers the label the API
+// wants. Comparison is relative, which keeps wide ratios from being pulled
+// toward the narrow end of the list by raw distance.
+func nearestAspectRatio(width, height int) string {
+	if width <= 0 || height <= 0 {
+		return "16:9"
+	}
+
+	got := float64(width) / float64(height)
+	best, bestDelta := "16:9", math.Inf(1)
+	for _, ar := range geminiAspectRatios {
+		if delta := math.Abs(got-ar.value) / ar.value; delta < bestDelta {
+			best, bestDelta = ar.label, delta
+		}
+	}
+
+	return best
 }

@@ -18,6 +18,16 @@ import (
 type FakeProvider struct {
 	mu          sync.Mutex
 	invocations int
+	outW, outH  int
+}
+
+// SetOutputSize forces every generated image to a fixed size regardless of the
+// dimensions a request asks for, mirroring providers that answer with their own
+// resolution instead of the one requested. Zero clears the override.
+func (f *FakeProvider) SetOutputSize(w, h int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.outW, f.outH = w, h
 }
 
 // NewFakeProvider initializes an offline FakeProvider instance.
@@ -70,6 +80,12 @@ func (f *FakeProvider) Generate(ctx context.Context, req providers.GenerateReque
 	if h <= 0 {
 		h = 512
 	}
+
+	f.mu.Lock()
+	if f.outW > 0 && f.outH > 0 {
+		w, h = f.outW, f.outH
+	}
+	f.mu.Unlock()
 
 	var seed int64
 	if req.Seed != nil {

@@ -89,14 +89,22 @@ func handleGenerateDrafts(cfg *config.Config, reg *providers.Registry, guard *bu
 
 			_ = os.WriteFile(absPath, imgBytes, 0644)
 
-			sidecar := providers.BuildSidecar(relRef, provider.Name(), result, genReq)
-			_ = core.WriteSidecar(absPath, sidecar)
-
-			decoded, _, err := image.Decode(bytes.NewReader(imgBytes))
+			// Decode before recording anything: both the sidecar and the Asset
+			// handed back to the model must describe the image that was
+			// produced, not the size that was requested.
+			var dims core.Dimensions
 			var thumb *mcp.ImageContent
+			decoded, _, err := image.Decode(bytes.NewReader(imgBytes))
 			if err == nil {
+				dims = core.Dimensions{
+					Width:  decoded.Bounds().Dx(),
+					Height: decoded.Bounds().Dy(),
+				}
 				thumb, _ = thumbnailContent(decoded, 512)
 			}
+
+			sidecar := providers.BuildSidecar(relRef, provider.Name(), result, genReq, dims)
+			_ = core.WriteSidecar(absPath, sidecar)
 
 			if thumb != nil {
 				contentList = append(contentList, thumb)
@@ -106,11 +114,8 @@ func handleGenerateDrafts(cfg *config.Config, reg *providers.Registry, guard *bu
 				Ref:      relRef,
 				Origin:   core.OriginGenerated,
 				MIMEType: result.MIMEType,
-				Dims: core.Dimensions{
-					Width:  w,
-					Height: h,
-				},
-				Bytes: int64(len(imgBytes)),
+				Dims:     dims,
+				Bytes:    int64(len(imgBytes)),
 			})
 			seeds = append(seeds, result.Seed)
 		}
@@ -222,12 +227,12 @@ func handleRefine(cfg *config.Config, reg *providers.Registry, guard *budget.Gua
 		}
 
 		return &mcp.CallToolResult{
-			Content: []mcp.Content{thumb},
-		}, RefineOut{
-			Asset:      asset,
-			CostUSD:    result.CostUSD,
-			BudgetLeft: guard.BudgetLeft(),
-		}, nil
+				Content: []mcp.Content{thumb},
+			}, RefineOut{
+				Asset:      asset,
+				CostUSD:    result.CostUSD,
+				BudgetLeft: guard.BudgetLeft(),
+			}, nil
 	}
 }
 
