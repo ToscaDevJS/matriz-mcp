@@ -56,14 +56,17 @@ Registro de decisiones técnicas, verificaciones manuales y alcance diferido con
   sola, evaluar N llamadas en paralelo; si ignora el ratio, revisar el mapeo de
   `nearestAspectRatio`.
 
-## 6. `img_refine` no escribe sidecar
-- **Estado**: Detectado el 2026-09-02, sin corregir.
-- **Contexto**: `handleRefine` (`internal/mcpserver/tools_generative.go`) escribe el archivo
-  de salida con `os.WriteFile`, pero nunca llama a `core.WriteSidecar`. Toda imagen refinada
-  queda en disco sin su `.meta.json`.
-- **Impacto**: viola §5.4 («todo archivo producido escribe su sidecar»). Se pierde la
-  trazabilidad de proveedor, modelo, prompt, seed y costo de cada refinamiento, que es
-  justamente la operación que cuesta dinero.
-- **Acción**: decidir el alcance del arreglo. `BuildSidecar` asume `origin: generated`; un
-  refinamiento parte de un asset existente, así que probablemente corresponda
-  `origin: derived` con `derived_from` apuntando al origen.
+## 6. `img_refine` no escribía sidecar
+- **Estado**: Resuelto el 2026-09-02.
+- **Contexto**: `handleRefine` escribía el archivo de salida con `os.WriteFile`, pero nunca
+  llamaba a `core.WriteSidecar`. Toda imagen refinada quedaba en disco sin su `.meta.json`,
+  violando §5.4 justo en la operación que cuesta dinero.
+- **Decisión de modelado**: se agregó `providers.BuildEditSidecar`. Un refinamiento lleva
+  `origin: generated`, no `derived`, porque `derived` está definido en `core/types.go` como
+  «transformación determinista de otro asset» y un refinamiento lo produce un modelo
+  generativo. La cadena hacia el original se registra en `derived_from`, que es un campo
+  independiente de `origin`.
+- **Corregido en el mismo paso**: `handleRefine` indexaba `result.Images[0]` sin verificar
+  el largo y descartaba el error de `image.Decode` antes de llamar `decoded.Bounds()`. Ambos
+  eran panics; un panic en un handler stdio se lleva puesto el servidor en vez de llegar al
+  modelo (regla 7.9). Ahora devuelven `CallToolResult{IsError: true}`.

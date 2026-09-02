@@ -41,6 +41,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`CallTransform` and `CallGenerateDrafts` dropped the tool's structured
   output** whenever a result carried thumbnail content, leaving tests able to
   assert only on the preview.
+- **`img_refine` wrote no sidecar at all.** Every refined image landed on disk
+  with no record of the provider, model, prompt, seed or cost behind it, on the
+  one operation that spends money (§5.4). A refined image now writes its
+  `.meta.json` with `origin: generated` and `derived_from` pointing at the asset
+  it started from.
+- **`img_refine` could take the server down.** It indexed `result.Images[0]`
+  without checking the length and discarded the `image.Decode` error before
+  calling `Bounds()` on the result. Either one panicked, and a panic in a stdio
+  handler kills the process instead of reaching the model; both now return an
+  actionable tool error (hard rule 7.9).
 
 ### Added
 - **PR-D3 (Unified CLI & SDD Complete)**:

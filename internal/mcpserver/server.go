@@ -142,3 +142,19 @@ func CallGenerateDrafts(ctx context.Context, cfg *config.Config, reg *providers.
 	}
 	return res, nil
 }
+
+// CallRefine executes img_refine handler directly for testing.
+func CallRefine(ctx context.Context, cfg *config.Config, reg *providers.Registry, guard *budget.Guard, in RefineIn) (*mcp.CallToolResult, error) {
+	handler := handleRefine(cfg, reg, guard)
+	res, out, err := handler(ctx, &mcp.CallToolRequest{}, in)
+	if err != nil {
+		return res, err
+	}
+	if res == nil {
+		res = &mcp.CallToolResult{}
+	}
+	if res.StructuredContent == nil {
+		res.StructuredContent = out
+	}
+	return res, nil
+}

@@ -250,3 +250,109 @@ func TestBuildSidecar_OmitsUnknownDimensions(t *testing.T) {
 		t.Error("params.seeded must survive even when dimensions are unknown")
 	}
 }
+
+// TestBuildEditSidecar_RecordsProvenance covers §5.4 for the edit path, which
+// wrote no sidecar at all: every refined image landed on disk with no record of
+// the provider, model, prompt or cost behind it -- on the operation that spends
+// money. An edit is still generative output, so its origin stays "generated";
+// DerivedFrom carries the asset it started from.
+func TestBuildEditSidecar_RecordsProvenance(t *testing.T) {
+	res := &providers.Result{
+		Images:   [][]byte{[]byte("fake-image-bytes")},
+		MIMEType: "image/png",
+		Model:    "gemini-3-pro-image-preview",
+		CostUSD:  0.134,
+	}
+
+	source := core.AssetRef("assets/drafts/draft-1.png")
+	sidecar := providers.BuildEditSidecar(
+		core.AssetRef("assets/refined-1.png"), "gemini", res,
+		providers.EditRequest{
+			Prompt:    "remove the background",
+			Operation: providers.CapabilityRemoveBG,
+		},
+		source,
+		core.Dimensions{Width: 1408, Height: 768},
+	)
+
+	if sidecar.Schema != core.SidecarSchema {
+		t.Errorf("schema = %q, want %q", sidecar.Schema, core.SidecarSchema)
+	}
+	if sidecar.Origin != core.OriginGenerated {
+		t.Errorf("origin = %q, want %q: an edit is produced by a generative model",
+			sidecar.Origin, core.OriginGenerated)
+	}
+	if sidecar.DerivedFrom == nil {
+		t.Fatal("derived_from = nil, want the source asset it started from")
+	}
+	if *sidecar.DerivedFrom != source {
+		t.Errorf("derived_from = %q, want %q", *sidecar.DerivedFrom, source)
+	}
+	if sidecar.Provider != "gemini" {
+		t.Errorf("provider = %q, want %q", sidecar.Provider, "gemini")
+	}
+	if sidecar.Model != "gemini-3-pro-image-preview" {
+		t.Errorf("model = %q, want the model that produced it", sidecar.Model)
+	}
+	if sidecar.Prompt != "remove the background" {
+		t.Errorf("prompt = %q, want the instruction given", sidecar.Prompt)
+	}
+	if sidecar.CostUSD != 0.134 {
+		t.Errorf("cost_usd = %v, want 0.134", sidecar.CostUSD)
+	}
+	if got := sidecar.Params["operation"]; got != string(providers.CapabilityRemoveBG) {
+		t.Errorf("params.operation = %v, want %q", got, providers.CapabilityRemoveBG)
+	}
+	if got := sidecar.Params["width"]; got != 1408 {
+		t.Errorf("params.width = %v, want 1408 (produced)", got)
+	}
+	if got := sidecar.Params["height"]; got != 768 {
+		t.Errorf("params.height = %v, want 768 (produced)", got)
+	}
+}
+
+// TestBuildEditSidecar_NeverInventsSeed pins hard rule 7.12 on the edit path.
+func TestBuildEditSidecar_NeverInventsSeed(t *testing.T) {
+	res := &providers.Result{
+		Images: [][]byte{[]byte("fake-image-bytes")},
+		Model:  "gemini-3-pro-image-preview",
+		Seed:   0,
+	}
+
+	sidecar := providers.BuildEditSidecar(
+		core.AssetRef("assets/refined-1.png"), "gemini", res,
+		providers.EditRequest{Prompt: "inpaint the chair", Operation: providers.CapabilityInpaint},
+		core.AssetRef("assets/drafts/draft-1.png"),
+		core.Dimensions{Width: 512, Height: 512},
+	)
+
+	if sidecar.Seed != 0 {
+		t.Errorf("seed = %d, want 0 when the provider reported none", sidecar.Seed)
+	}
+	if seeded, ok := sidecar.Params["seeded"].(bool); !ok || seeded {
+		t.Errorf("params.seeded = %v, want false", sidecar.Params["seeded"])
+	}
+}
+
+// TestBuildEditSidecar_OmitsUnknownDimensions keeps the edit path honest too:
+// an undecodable result records no dimensions rather than inventing them.
+func TestBuildEditSidecar_OmitsUnknownDimensions(t *testing.T) {
+	res := &providers.Result{
+		Images: [][]byte{[]byte("undecodable")},
+		Model:  "gemini-3-pro-image-preview",
+	}
+
+	sidecar := providers.BuildEditSidecar(
+		core.AssetRef("assets/refined-1.png"), "gemini", res,
+		providers.EditRequest{Prompt: "outpaint", Operation: providers.CapabilityOutpaint},
+		core.AssetRef("assets/drafts/draft-1.png"),
+		core.Dimensions{},
+	)
+
+	if _, present := sidecar.Params["width"]; present {
+		t.Errorf("params.width = %v, want the key absent", sidecar.Params["width"])
+	}
+	if _, present := sidecar.Params["height"]; present {
+		t.Errorf("params.height = %v, want the key absent", sidecar.Params["height"])
+	}
+}
