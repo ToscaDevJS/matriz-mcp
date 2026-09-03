@@ -24,6 +24,7 @@ func main() {
 	if cfg.GoogleAPIKey != "" {
 		geminiProv, err := gemini.NewGeminiProvider(context.Background(), cfg.GoogleAPIKey, cfg.ModelDraft, cfg.ModelFinal)
 		if err == nil {
+			geminiProv.SetVideoModels(cfg.ModelVideoDraft, cfg.ModelVideoFinal)
 			reg.Register(geminiProv)
 		}
 	}

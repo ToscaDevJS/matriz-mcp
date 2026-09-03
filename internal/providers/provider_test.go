@@ -356,3 +356,73 @@ func TestBuildEditSidecar_OmitsUnknownDimensions(t *testing.T) {
 		t.Errorf("params.height = %v, want the key absent", sidecar.Params["height"])
 	}
 }
+
+func TestRegistry_VideoProviderDiscovery(t *testing.T) {
+	reg := providers.NewRegistry()
+	fp := fake.NewFakeProvider()
+	reg.Register(fp)
+
+	vp, err := reg.GetVideo("fake")
+	if err != nil {
+		t.Fatalf("expected FakeProvider to be discovered as VideoProvider: %v", err)
+	}
+	if vp.Name() != "fake" {
+		t.Errorf("expected name 'fake', got %q", vp.Name())
+	}
+
+	caps := vp.Capabilities()
+	hasCap := func(c providers.Capability) bool {
+		for _, cap := range caps {
+			if cap == c {
+				return true
+			}
+		}
+		return false
+	}
+
+	if !hasCap(providers.CapabilityVideoDraft) {
+		t.Errorf("expected capability %s", providers.CapabilityVideoDraft)
+	}
+	if !hasCap(providers.CapabilityImageToVideo) {
+		t.Errorf("expected capability %s", providers.CapabilityImageToVideo)
+	}
+}
+
+func TestFakeVideoProvider_ExecutionAndSidecar(t *testing.T) {
+	fp := fake.NewFakeProvider()
+	srcRef := core.AssetRef("assets/hero.png")
+	req := providers.VideoRequest{
+		Prompt:      "animate waving grass",
+		SourceImage: []byte("fake-png-bytes"),
+		SourceRef:   &srcRef,
+		DurationSec: 5.0,
+		FPS:         24,
+	}
+
+	job, err := fp.StartVideo(context.Background(), req)
+	if err != nil {
+		t.Fatalf("StartVideo failed: %v", err)
+	}
+	if job.Status != providers.VideoJobProcessing && job.Status != providers.VideoJobCompleted {
+		t.Errorf("unexpected job status: %s", job.Status)
+	}
+
+	jobDone, res, err := fp.PollVideo(context.Background(), job.ID)
+	if err != nil {
+		t.Fatalf("PollVideo failed: %v", err)
+	}
+	if jobDone.Status != providers.VideoJobCompleted {
+		t.Errorf("expected job to be completed, got %s", jobDone.Status)
+	}
+	if len(res.VideoBytes) == 0 {
+		t.Errorf("expected non-empty video bytes")
+	}
+
+	sidecar := providers.BuildVideoSidecar(core.AssetRef("assets/videos/hero.mp4"), fp.Name(), res, req)
+	if sidecar.DerivedFrom == nil || *sidecar.DerivedFrom != "assets/hero.png" {
+		t.Errorf("expected DerivedFrom='assets/hero.png', got %v", sidecar.DerivedFrom)
+	}
+	if dur, ok := sidecar.Params["duration_sec"].(float64); !ok || dur != 5.0 {
+		t.Errorf("expected params.duration_sec=5.0, got %v", sidecar.Params["duration_sec"])
+	}
+}

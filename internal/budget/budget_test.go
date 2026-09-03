@@ -58,3 +58,107 @@ func TestT10_Guard_RejectsMaxCalls(t *testing.T) {
 		t.Errorf("error message should mention call limit: %s", err.Error())
 	}
 }
+
+func TestGuard_TwoPhase_ReserveCommit(t *testing.T) {
+	g := budget.NewGuard(5.00, 10)
+
+	ticket, err := g.ReserveTicket(1.50)
+	if err != nil {
+		t.Fatalf("unexpected ReserveTicket error: %v", err)
+	}
+	if ticket == "" {
+		t.Fatalf("expected non-empty ticket ID")
+	}
+
+	if left := g.BudgetLeft(); left != 3.50 {
+		t.Errorf("expected BudgetLeft=3.50 while reserved, got %.2f", left)
+	}
+
+	if err := g.CommitTicket(ticket, 1.40); err != nil {
+		t.Fatalf("unexpected CommitTicket error: %v", err)
+	}
+
+	if spent := g.SpentUSD(); spent != 1.40 {
+		t.Errorf("expected SpentUSD=1.40, got %.2f", spent)
+	}
+	if calls := g.Calls(); calls != 1 {
+		t.Errorf("expected Calls=1, got %d", calls)
+	}
+	if left := g.BudgetLeft(); left != 3.60 {
+		t.Errorf("expected BudgetLeft=3.60, got %.2f", left)
+	}
+}
+
+func TestGuard_TwoPhase_ReserveRelease(t *testing.T) {
+	g := budget.NewGuard(5.00, 10)
+
+	ticket, err := g.ReserveTicket(2.00)
+	if err != nil {
+		t.Fatalf("unexpected ReserveTicket error: %v", err)
+	}
+
+	if left := g.BudgetLeft(); left != 3.00 {
+		t.Errorf("expected BudgetLeft=3.00, got %.2f", left)
+	}
+
+	if err := g.ReleaseTicket(ticket); err != nil {
+		t.Fatalf("unexpected ReleaseTicket error: %v", err)
+	}
+
+	if spent := g.SpentUSD(); spent != 0.00 {
+		t.Errorf("expected SpentUSD=0.00 after release, got %.2f", spent)
+	}
+	if calls := g.Calls(); calls != 0 {
+		t.Errorf("expected Calls=0 after release, got %d", calls)
+	}
+	if left := g.BudgetLeft(); left != 5.00 {
+		t.Errorf("expected BudgetLeft=5.00 after release, got %.2f", left)
+	}
+}
+
+func TestGuard_TwoPhase_ConcurrentHoldsPreventBreach(t *testing.T) {
+	g := budget.NewGuard(3.00, 10)
+
+	t1, err := g.ReserveTicket(2.00)
+	if err != nil {
+		t.Fatalf("unexpected ReserveTicket error for t1: %v", err)
+	}
+	if t1 == "" {
+		t.Fatalf("expected non-empty ticket for t1")
+	}
+
+	_, err = g.ReserveTicket(1.50)
+	if err == nil {
+		t.Fatalf("expected ReserveTicket to fail when 2.00 + 1.50 > 3.00")
+	}
+}
+
+func TestGuard_TwoPhase_InFlightBlocksMaxCalls(t *testing.T) {
+	g := budget.NewGuard(100.00, 2)
+
+	_, err := g.ReserveTicket(0.10)
+	if err != nil {
+		t.Fatalf("unexpected error on 1st reserve: %v", err)
+	}
+	_, err = g.ReserveTicket(0.10)
+	if err != nil {
+		t.Fatalf("unexpected error on 2nd reserve: %v", err)
+	}
+
+	// 3rd should fail even with remaining budget
+	_, err = g.ReserveTicket(0.10)
+	if err == nil {
+		t.Fatalf("expected 3rd reserve to fail due to inFlight maxCalls limit")
+	}
+}
+
+func TestGuard_TwoPhase_InvalidTicketReturnsError(t *testing.T) {
+	g := budget.NewGuard(10.00, 10)
+
+	if err := g.CommitTicket("non-existent", 1.00); err == nil {
+		t.Fatalf("expected error committing non-existent ticket")
+	}
+	if err := g.ReleaseTicket("non-existent"); err == nil {
+		t.Fatalf("expected error releasing non-existent ticket")
+	}
+}

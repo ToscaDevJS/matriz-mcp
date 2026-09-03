@@ -19,6 +19,8 @@ const (
 	FormatJPG  ImageFormat = "jpg"
 	FormatPNG  ImageFormat = "png"
 	FormatWebP ImageFormat = "webp"
+	FormatMP4  ImageFormat = "mp4"
+	FormatWebM ImageFormat = "webm"
 )
 
 // ParseFormat normalizes a format string or file extension into an ImageFormat.
@@ -31,6 +33,10 @@ func ParseFormat(extOrFormat string) (ImageFormat, error) {
 		return FormatPNG, nil
 	case "webp":
 		return FormatWebP, nil
+	case "mp4":
+		return FormatMP4, nil
+	case "webm":
+		return FormatWebM, nil
 	case "avif":
 		return "", fmt.Errorf("unsupported image format %q: AVIF encoding is disabled due to WASM libaom latency (30s+); use \"webp\", \"png\", or \"jpeg\"", extOrFormat)
 	default:
@@ -47,6 +53,10 @@ func (f ImageFormat) MIMEType() string {
 		return "image/png"
 	case FormatWebP:
 		return "image/webp"
+	case FormatMP4:
+		return "video/mp4"
+	case FormatWebM:
+		return "video/webm"
 	default:
 		return "application/octet-stream"
 	}
@@ -61,6 +71,10 @@ func (f ImageFormat) Extension() string {
 		return ".png"
 	case FormatWebP:
 		return ".webp"
+	case FormatMP4:
+		return ".mp4"
+	case FormatWebM:
+		return ".webm"
 	default:
 		return ""
 	}

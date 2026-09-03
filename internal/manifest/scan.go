@@ -55,29 +55,47 @@ func ScanProject(projectRoot, projectName string) (*Manifest, error) {
 			return nil
 		}
 
-		f, err := os.Open(path)
-		if err != nil {
-			return nil
+		origin := core.OriginClient
+		sidecar, err := core.ReadSidecar(path)
+		if err == nil && sidecar.Origin != "" {
+			origin = sidecar.Origin
 		}
-		defer f.Close()
 
-		cfg, _, err := image.DecodeConfig(f)
 		width, height := 0, 0
-		if err == nil {
-			width = cfg.Width
-			height = cfg.Height
+		var duration float64
+
+		if format == core.FormatMP4 || format == core.FormatWebM {
+			if err == nil && sidecar != nil {
+				if w, ok := sidecar.Params["width"].(float64); ok {
+					width = int(w)
+				} else if w, ok := sidecar.Params["width"].(int); ok {
+					width = w
+				}
+				if h, ok := sidecar.Params["height"].(float64); ok {
+					height = int(h)
+				} else if h, ok := sidecar.Params["height"].(int); ok {
+					height = h
+				}
+				if dur, ok := sidecar.Params["duration_sec"].(float64); ok {
+					duration = dur
+				}
+			}
+		} else {
+			f, err := os.Open(path)
+			if err == nil {
+				cfg, _, err := image.DecodeConfig(f)
+				if err == nil {
+					width = cfg.Width
+					height = cfg.Height
+				}
+				f.Close()
+			}
 		}
 
 		fi, _ := d.Info()
 		var fileBytes int64
 		if fi != nil {
 			fileBytes = fi.Size()
-		}
-
-		origin := core.OriginClient
-		sidecar, err := core.ReadSidecar(path)
-		if err == nil && sidecar.Origin != "" {
-			origin = sidecar.Origin
 		}
 
 		scannedAssets = append(scannedAssets, Asset{
@@ -88,7 +106,8 @@ func ScanProject(projectRoot, projectName string) (*Manifest, error) {
 				Width:  width,
 				Height: height,
 			},
-			Bytes: fileBytes,
+			Bytes:    fileBytes,
+			Duration: duration,
 		})
 
 		return nil

@@ -18,6 +18,12 @@ const (
 	CapabilityRemoveBG    Capability = "remove_background"
 	CapabilityUpscale     Capability = "upscale"
 	CapabilityDeterminism Capability = "seeded" // same seed + params => same image
+
+	// Video generation capabilities
+	CapabilityVideoDraft   Capability = "video_draft"
+	CapabilityVideoFinal   Capability = "video_final"
+	CapabilityImageToVideo Capability = "image_to_video"
+	CapabilityTextToVideo  Capability = "text_to_video"
 )
 
 // GenerateRequest is provider-agnostic. Provider implementations translate it

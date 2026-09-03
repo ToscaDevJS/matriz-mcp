@@ -6,6 +6,7 @@ import (
 	"math"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/toscodevjs/matriz/internal/providers"
 	"google.golang.org/genai"
@@ -13,10 +14,12 @@ import (
 
 // GeminiProvider implements providers.Provider using the official Google GenAI Go SDK.
 type GeminiProvider struct {
-	client       *genai.Client
-	pricingTable *PricingTable
-	defaultDraft string
-	defaultFinal string
+	client            *genai.Client
+	pricingTable      *PricingTable
+	defaultDraft      string
+	defaultFinal      string
+	defaultVideoDraft string
+	defaultVideoFinal string
 }
 
 // NewGeminiProvider initializes a GeminiProvider with an API key and model configurations.
@@ -41,11 +44,23 @@ func NewGeminiProvider(ctx context.Context, apiKey, draftModel, finalModel strin
 	}
 
 	return &GeminiProvider{
-		client:       client,
-		pricingTable: NewPricingTable(),
-		defaultDraft: draftModel,
-		defaultFinal: finalModel,
+		client:            client,
+		pricingTable:      NewPricingTable(),
+		defaultDraft:      draftModel,
+		defaultFinal:      finalModel,
+		defaultVideoDraft: "gemini-omni-1.1-flash",
+		defaultVideoFinal: "veo-3.1-generate-preview",
 	}, nil
+}
+
+// SetVideoModels overrides the default draft and final video models.
+func (g *GeminiProvider) SetVideoModels(draft, final string) {
+	if draft != "" {
+		g.defaultVideoDraft = draft
+	}
+	if final != "" {
+		g.defaultVideoFinal = final
+	}
 }
 
 // Name returns the provider identifier.
@@ -61,6 +76,10 @@ func (g *GeminiProvider) Capabilities() []providers.Capability {
 		providers.CapabilityOutpaint,
 		providers.CapabilityRemoveBG,
 		providers.CapabilityUpscale,
+		providers.CapabilityVideoDraft,
+		providers.CapabilityVideoFinal,
+		providers.CapabilityImageToVideo,
+		providers.CapabilityTextToVideo,
 	}
 }
 
@@ -416,4 +435,190 @@ func nearestAspectRatio(width, height int) string {
 	}
 
 	return best
+}
+
+// EstimateVideoCostUSD performs offline cost estimation for video generation.
+func (g *GeminiProvider) EstimateVideoCostUSD(req providers.VideoRequest) float64 {
+	dur := req.DurationSec
+	if dur <= 0 {
+		dur = 5.0
+	}
+
+	model := req.Model
+	if model == "" {
+		model = g.defaultVideoDraft
+	}
+
+	if strings.Contains(model, "flash") || strings.Contains(model, "omni") {
+		// Gemini Omni Flash: ~ $0.10 per second
+		return 0.10 * dur
+	}
+	if strings.Contains(model, "lite") {
+		// Veo Lite: ~ $0.05 per second
+		return 0.05 * dur
+	}
+	// Veo 3.1 / Standard: ~ $0.40 per second
+	return 0.40 * dur
+}
+
+// StartVideo dispatches an asynchronous video generation request.
+func (g *GeminiProvider) StartVideo(ctx context.Context, req providers.VideoRequest) (*providers.VideoJob, error) {
+	if g.client == nil {
+		return nil, fmt.Errorf("gemini client not initialized (missing GOOGLE_API_KEY)")
+	}
+
+	modelID := req.Model
+	if modelID == "" {
+		modelID = g.defaultVideoDraft
+	}
+
+	dur := int32(req.DurationSec)
+	if dur <= 0 {
+		dur = 5
+	}
+	fps := int32(req.FPS)
+	if fps <= 0 {
+		fps = 24
+	}
+
+	aspectRatio := req.AspectRatio
+	if aspectRatio == "" {
+		aspectRatio = "16:9"
+	}
+
+	cfg := &genai.GenerateVideosConfig{
+		AspectRatio:     aspectRatio,
+		DurationSeconds: &dur,
+		FPS:             &fps,
+		NegativePrompt:  req.NegativePrompt,
+	}
+	if req.Seed != nil {
+		s := int32(*req.Seed)
+		cfg.Seed = &s
+	}
+
+	var op *genai.GenerateVideosOperation
+	var err error
+
+	if len(req.SourceImage) > 0 {
+		img := &genai.Image{
+			ImageBytes: req.SourceImage,
+			MIMEType:   "image/png",
+		}
+		op, err = g.client.Models.GenerateVideos(ctx, modelID, req.Prompt, img, cfg)
+	} else {
+		op, err = g.client.Models.GenerateVideos(ctx, modelID, req.Prompt, nil, cfg)
+	}
+
+	if err != nil {
+		return nil, translateGoogleVideoError(err)
+	}
+
+	return &providers.VideoJob{
+		ID:               op.Name,
+		Provider:         "gemini",
+		Model:            modelID,
+		Status:           providers.VideoJobProcessing,
+		ProgressPct:      10,
+		CreatedAt:        time.Now().UTC(),
+		EstimatedCostUSD: g.EstimateVideoCostUSD(req),
+	}, nil
+}
+
+// PollVideo queries the operation status of an in-flight video generation.
+func (g *GeminiProvider) PollVideo(ctx context.Context, jobID string) (*providers.VideoJob, *providers.VideoResult, error) {
+	if g.client == nil {
+		return nil, nil, fmt.Errorf("gemini client not initialized (missing GOOGLE_API_KEY)")
+	}
+
+	op := &genai.GenerateVideosOperation{Name: jobID}
+	updatedOp, err := g.client.Operations.GetVideosOperation(ctx, op, nil)
+	if err != nil {
+		return nil, nil, translateGoogleVideoError(err)
+	}
+
+	if !updatedOp.Done {
+		return &providers.VideoJob{
+			ID:          jobID,
+			Provider:    "gemini",
+			Status:      providers.VideoJobProcessing,
+			ProgressPct: 50,
+			CreatedAt:   time.Now().UTC(),
+		}, nil, nil
+	}
+
+	if updatedOp.Error != nil && len(updatedOp.Error) > 0 {
+		errMsg := fmt.Sprintf("%v", updatedOp.Error)
+		return &providers.VideoJob{
+			ID:       jobID,
+			Provider: "gemini",
+			Status:   providers.VideoJobFailed,
+			Error:    errMsg,
+		}, nil, fmt.Errorf("video generation failed: %s", errMsg)
+	}
+
+	if updatedOp.Response == nil || len(updatedOp.Response.GeneratedVideos) == 0 {
+		if updatedOp.Response != nil && updatedOp.Response.RAIMediaFilteredCount > 0 {
+			reasons := strings.Join(updatedOp.Response.RAIMediaFilteredReasons, ", ")
+			return &providers.VideoJob{
+				ID:       jobID,
+				Provider: "gemini",
+				Status:   providers.VideoJobFailed,
+				Error:    fmt.Sprintf("safety filter blocked generation: %s", reasons),
+			}, nil, fmt.Errorf("video generation blocked by Google safety filters: %s", reasons)
+		}
+		return &providers.VideoJob{
+			ID:       jobID,
+			Provider: "gemini",
+			Status:   providers.VideoJobFailed,
+			Error:    "no video returned in response",
+		}, nil, fmt.Errorf("provider returned no video in response")
+	}
+
+	firstVid := updatedOp.Response.GeneratedVideos[0].Video
+	var videoBytes []byte
+	mimeType := "video/mp4"
+
+	if firstVid != nil {
+		if len(firstVid.VideoBytes) > 0 {
+			videoBytes = firstVid.VideoBytes
+		}
+		if firstVid.MIMEType != "" {
+			mimeType = firstVid.MIMEType
+		}
+	}
+
+	job := &providers.VideoJob{
+		ID:          jobID,
+		Provider:    "gemini",
+		Status:      providers.VideoJobCompleted,
+		ProgressPct: 100,
+	}
+
+	res := &providers.VideoResult{
+		VideoBytes: videoBytes,
+		MIMEType:   mimeType,
+		CostUSD:    0.40,
+	}
+
+	return job, res, nil
+}
+
+// CancelVideo attempts to cancel an in-flight operation.
+func (g *GeminiProvider) CancelVideo(ctx context.Context, jobID string) error {
+	return nil
+}
+
+func translateGoogleVideoError(err error) error {
+	if err == nil {
+		return nil
+	}
+	msg := err.Error()
+	if strings.Contains(msg, "RESOURCE_EXHAUSTED") || strings.Contains(msg, "429") {
+		return fmt.Errorf("video generation quota exceeded (RESOURCE_EXHAUSTED): wait before retrying or request quota increase: %w", err)
+	}
+	if strings.Contains(msg, "HARM_CATEGORY") || strings.Contains(msg, "safety") || strings.Contains(msg, "blocked") {
+		return fmt.Errorf("video generation blocked by Google safety filters: modify prompt or change anchor image: %w", err)
+	}
+	return err
 }

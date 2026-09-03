@@ -95,3 +95,54 @@ func createPNG(t *testing.T, path string, w, h int) {
 		t.Fatalf("failed to encode png: %v", err)
 	}
 }
+
+func TestScanProject_DiscoversVideoAssets(t *testing.T) {
+	tempDir := t.TempDir()
+	assetsDir := filepath.Join(tempDir, "assets", "videos")
+	if err := os.MkdirAll(assetsDir, 0755); err != nil {
+		t.Fatalf("failed to create assets dir: %v", err)
+	}
+
+	videoPath := filepath.Join(assetsDir, "hero.mp4")
+	if err := os.WriteFile(videoPath, []byte("dummy-mp4-data"), 0644); err != nil {
+		t.Fatalf("failed to write dummy video: %v", err)
+	}
+
+	sidecar := &core.Sidecar{
+		Schema:    core.SidecarSchema,
+		Ref:       core.AssetRef("assets/videos/hero.mp4"),
+		Origin:    core.OriginGenerated,
+		CreatedAt: time.Now().UTC(),
+		Params: map[string]any{
+			"width":        1920,
+			"height":       1080,
+			"duration_sec": 6.5,
+		},
+	}
+	if err := core.WriteSidecar(videoPath, sidecar); err != nil {
+		t.Fatalf("failed to write sidecar: %v", err)
+	}
+
+	m, err := manifest.ScanProject(tempDir, "test-project")
+	if err != nil {
+		t.Fatalf("ScanProject failed: %v", err)
+	}
+
+	if len(m.Assets) != 1 {
+		t.Fatalf("expected 1 asset in manifest, got %d", len(m.Assets))
+	}
+
+	asset := m.Assets[0]
+	if asset.Ref != "assets/videos/hero.mp4" {
+		t.Errorf("expected ref assets/videos/hero.mp4, got %s", asset.Ref)
+	}
+	if asset.MIMEType != "video/mp4" {
+		t.Errorf("expected MIMEType video/mp4, got %s", asset.MIMEType)
+	}
+	if asset.Dims.Width != 1920 || asset.Dims.Height != 1080 {
+		t.Errorf("expected 1920x1080, got %dx%d", asset.Dims.Width, asset.Dims.Height)
+	}
+	if asset.Duration != 6.5 {
+		t.Errorf("expected duration 6.5, got %f", asset.Duration)
+	}
+}

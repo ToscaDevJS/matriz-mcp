@@ -8,7 +8,7 @@ import (
 
 // Injected via ldflags during build.
 var (
-	Version   = "v0.2.0"
+	Version   = "v0.3.0"
 	GitCommit = "dev"
 	BuildDate = "unknown"
 )

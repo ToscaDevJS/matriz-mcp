@@ -6,6 +6,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/toscodevjs/matriz/internal/budget"
 	"github.com/toscodevjs/matriz/internal/config"
+	"github.com/toscodevjs/matriz/internal/jobs"
 	"github.com/toscodevjs/matriz/internal/providers"
 	"github.com/toscodevjs/matriz/internal/version"
 )
@@ -87,6 +88,44 @@ var (
 			Title:           "Upscale Draft to Pro Quality",
 		},
 	}
+
+	ToolVideoGenerate = &mcp.Tool{
+		Name: "video_generate",
+		Description: "COSTS MONEY and takes minutes. Initiates asynchronous video generation (Text-to-Video or Image-to-Video). " +
+			"Returns immediately with a job_id. Do NOT poll repeatedly; check status with video_status after suggested interval.",
+		Annotations: &mcp.ToolAnnotations{
+			ReadOnlyHint:    false,
+			DestructiveHint: &destrFalse,
+			IdempotentHint:  false,
+			OpenWorldHint:   &openWorldTrue,
+			Title:           "Generate Video (Async)",
+		},
+	}
+
+	ToolVideoStatus = &mcp.Tool{
+		Name: "video_status",
+		Description: "FREE. Checks the status of an in-flight video generation job and returns results upon completion. " +
+			"Applies smart wait (default 5s) to avoid busy-polling.",
+		Annotations: &mcp.ToolAnnotations{
+			ReadOnlyHint:    true,
+			DestructiveHint: &destrFalse,
+			IdempotentHint:  true,
+			OpenWorldHint:   &openWorldFalse,
+			Title:           "Check Video Job Status",
+		},
+	}
+
+	ToolVideoCancel = &mcp.Tool{
+		Name: "video_cancel",
+		Description: "FREE. Cancels an in-flight video generation job and releases any reserved budget hold.",
+		Annotations: &mcp.ToolAnnotations{
+			ReadOnlyHint:    false,
+			DestructiveHint: &destrFalse,
+			IdempotentHint:  true,
+			OpenWorldHint:   &openWorldFalse,
+			Title:           "Cancel Video Job",
+		},
+	}
 )
 
 // GetToolDefinitions returns all tool definitions for assertions and introspection.
@@ -97,6 +136,9 @@ func GetToolDefinitions() []*mcp.Tool {
 		ToolGenerateDrafts,
 		ToolRefine,
 		ToolUpscale,
+		ToolVideoGenerate,
+		ToolVideoStatus,
+		ToolVideoCancel,
 	}
 }
 
@@ -107,18 +149,28 @@ func NewServer(cfg *config.Config, reg *providers.Registry, guard *budget.Guard)
 		Version: version.Version,
 	}, nil)
 
-	RegisterTools(srv, cfg, reg, guard)
-	RegisterResources(srv, cfg)
+	engine := jobs.NewEngine(cfg.ProjectRoot, reg, guard)
+	RegisterToolsWithEngine(srv, cfg, reg, guard, engine)
+	RegisterResourcesWithEngine(srv, cfg, engine)
 	return srv
 }
 
-// RegisterTools registers all image management tools.
+// RegisterTools registers all image and video management tools.
 func RegisterTools(srv *mcp.Server, cfg *config.Config, reg *providers.Registry, guard *budget.Guard) {
+	engine := jobs.NewEngine(cfg.ProjectRoot, reg, guard)
+	RegisterToolsWithEngine(srv, cfg, reg, guard, engine)
+}
+
+// RegisterToolsWithEngine registers tools with an explicit jobs Engine instance.
+func RegisterToolsWithEngine(srv *mcp.Server, cfg *config.Config, reg *providers.Registry, guard *budget.Guard, engine *jobs.Engine) {
 	mcp.AddTool(srv, ToolListModels, handleListModels(cfg, reg, guard))
 	mcp.AddTool(srv, ToolTransform, handleTransform(cfg))
 	mcp.AddTool(srv, ToolGenerateDrafts, handleGenerateDrafts(cfg, reg, guard))
 	mcp.AddTool(srv, ToolRefine, handleRefine(cfg, reg, guard))
 	mcp.AddTool(srv, ToolUpscale, handleUpscale(cfg, reg, guard))
+	mcp.AddTool(srv, ToolVideoGenerate, handleVideoGenerate(cfg, reg, guard, engine))
+	mcp.AddTool(srv, ToolVideoStatus, handleVideoStatus(cfg, engine))
+	mcp.AddTool(srv, ToolVideoCancel, handleVideoCancel(engine))
 }
 
 // CallTransform executes img_transform handler directly for testing.

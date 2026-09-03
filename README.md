@@ -132,13 +132,18 @@ All MCP tools are grouped under the `img_` prefix:
 | Generate new image drafts from prompt | `img_generate_drafts` | ✅ Yes | **Paid (Tokens)** |
 | Inpaint / Outpaint / Remove background | `img_refine` | ✅ Yes | **Paid (Tokens)** |
 | Elevate draft to high-resolution Pro quality | `img_upscale` | ✅ Yes | **Paid (Tokens)** |
+| Generate new video from prompt (Async) | `video_generate` | ✅ Yes (Omni Flash / Veo 3.1) | **Paid ($/s)** |
+| Animate existing image asset to video | `video_generate` | ✅ Yes (Omni Flash / Veo 3.1) | **Paid ($/s)** |
+| Check status of in-flight video job | `video_status` | ❌ No (Local Engine) | **FREE ($0.00)** |
+| Cancel video job & release budget hold | `video_cancel` | ❌ No (Local Engine) | **FREE ($0.00)** |
 | Inspect active provider & budget | `img_list_models` | ❌ No | **FREE ($0.00)** |
 
-### MCP Resource: Project Manifest
+### MCP Resources
 
-- **URI**: `matriz://project/manifest`
-- **MIME Type**: `application/json`
-- **Purpose**: Autonomous agents read this resource to understand design slots, required aspect ratios, minimum widths, color palette, and asset inventory before generating assets.
+- **Project Manifest (`matriz://project/manifest`)**:
+  - Autonomous agents read this resource to understand design slots, required aspect ratios, minimum widths, color palette, and asset inventory before generating assets.
+- **Active Video Jobs (`matriz://jobs`)**:
+  - Inspects active and completed asynchronous video generation jobs, progress percentage, ETA, and produced video references.
 
 ---
 
@@ -153,8 +158,10 @@ Matriz adheres to 12-Factor principles and is configured exclusively via environ
 | `MATRIZ_BUDGET_USD` | Spending ceiling per session (fail-closed guard). | `2.00` |
 | `MATRIZ_MAX_GENERATIVE_CALLS` | Max generative calls allowed per session. | `20` |
 | `MATRIZ_PROJECT_ROOT` | Target web project root directory. | `.` |
-| `MATRIZ_MODEL_DRAFT` | Model ID for low-res fast drafts. | `gemini-3.1-flash-lite-image` |
-| `MATRIZ_MODEL_FINAL` | Model ID for production refinement. | `gemini-3-pro-image-preview` |
+| `MATRIZ_MODEL_DRAFT` | Model ID for low-res fast image drafts. | `gemini-3.1-flash-lite-image` |
+| `MATRIZ_MODEL_FINAL` | Model ID for production image refinement. | `gemini-3-pro-image-preview` |
+| `MATRIZ_MODEL_VIDEO_DRAFT` | Model ID for fast video drafts & conversational animation. | `gemini-omni-1.1-flash` |
+| `MATRIZ_MODEL_VIDEO_FINAL` | Model ID for cinematic high-fidelity final video. | `veo-3.1-generate-preview` |
 
 ### Setting up Claude Desktop
 

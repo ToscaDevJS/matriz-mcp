@@ -12,6 +12,8 @@ type Config struct {
 	ProjectRoot        string
 	ModelDraft         string
 	ModelFinal         string
+	ModelVideoDraft    string
+	ModelVideoFinal    string
 	BudgetUSD          float64
 	MaxGenerativeCalls int
 	DraftMaxEdge       int
@@ -25,6 +27,8 @@ func LoadFromEnv() *Config {
 		ProjectRoot:        getEnv("MATRIZ_PROJECT_ROOT", "."),
 		ModelDraft:         getEnv("MATRIZ_MODEL_DRAFT", "gemini-3.1-flash-lite-image"),
 		ModelFinal:         getEnv("MATRIZ_MODEL_FINAL", "gemini-3-pro-image-preview"),
+		ModelVideoDraft:    getEnv("MATRIZ_MODEL_VIDEO_DRAFT", "gemini-omni-1.1-flash"),
+		ModelVideoFinal:    getEnv("MATRIZ_MODEL_VIDEO_FINAL", "veo-3.1-generate-preview"),
 		BudgetUSD:          getEnvFloat("MATRIZ_BUDGET_USD", 2.00),
 		MaxGenerativeCalls: getEnvInt("MATRIZ_MAX_GENERATIVE_CALLS", 20),
 		DraftMaxEdge:       getEnvInt("MATRIZ_DRAFT_MAX_EDGE", 768),

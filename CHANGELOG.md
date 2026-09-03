@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-03
+
+### Added
+- **Asynchronous Video Generation & Motion Pipeline (`video_generate`, `video_status`, `video_cancel`)**:
+  - Implemented non-blocking video generation engine in `internal/jobs/engine.go` avoiding LLM client timeout traps (30s-60s) for jobs taking up to several minutes.
+  - Added `video_generate` MCP tool for both Text-to-Video and Image-to-Video generation using Gemini Omni Flash (`gemini-omni-1.1-flash`) and Google Veo 3.1 (`veo-3.1-generate-preview`).
+  - Added `video_status` with server-side bounded smart-wait (default 5s) returning visual poster thumbnails (max edge 512px) upon completion.
+  - Added `video_cancel` tool for early cancellation and immediate budget release.
+- **Two-Phase Budget Guard (`internal/budget`)**:
+  - Added ticket-based reservation mechanism (`ReserveTicket`, `CommitTicket`, `ReleaseTicket`, `ReservedUSD`, `InFlight`) locking estimated funds without premature spend or double-billing.
+- **Video Provider Abstraction & Google GenAI Integration**:
+  - Defined `VideoProvider`, `VideoRequest`, `VideoJob`, and `VideoResult` in `internal/providers/video.go`.
+  - Implemented `VideoProvider` on `FakeProvider` for deterministic testing and `GeminiProvider` using the official `google.golang.org/genai` Go SDK (`client.Models.GenerateVideos` and `client.Operations.GetVideosOperation`).
+  - Added video domain error mapping for Google safety blocks and quota exhaustion (`RESOURCE_EXHAUSTED`).
+- **Storage, Metadata & Manifest**:
+  - Extended `core.Asset` with `Duration` and `FormatMP4` / `FormatWebM`.
+  - Implemented `BuildVideoSidecar` writing compliant `matriz.sidecar/v1` sidecars preserving `derived_from` provenance.
+  - Updated `internal/manifest/scan.go` to inventory video assets and sidecars.
+  - Registered declarative resource `matriz://jobs`.
+
 ## [0.2.0] - 2026-09-03
 
 ### Added

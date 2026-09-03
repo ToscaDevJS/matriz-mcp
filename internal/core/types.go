@@ -28,6 +28,7 @@ type Asset struct {
 	MIMEType string     `json:"mime_type"`
 	Dims     Dimensions `json:"dims"`
 	Bytes    int64      `json:"bytes"`
+	Duration float64    `json:"duration,omitempty"`
 }
 
 // SidecarSchema is the schema identifier for metadata sidecars.

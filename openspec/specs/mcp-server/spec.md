@@ -44,3 +44,11 @@ The system MUST NOT propagate fatal Go errors to the MCP protocol; it MUST retur
 - GIVEN a request to transform a non-existent asset `assets/missing.png`
 - WHEN `img_transform` is invoked
 - THEN it returns `IsError: true` with a message explaining what failed and suggesting checking `matriz://project/manifest`
+
+### Requirement: Asynchronous Video Generation Tools
+The system MUST expose 3 video tools: `video_generate`, `video_status`, and `video_cancel`, with non-blocking dispatch and bounded smart-wait on polling.
+
+#### Scenario: Video tool exposure & cost markers
+- GIVEN the tool registry
+- WHEN tool descriptions are inspected
+- THEN `video_generate` starts with `COSTS MONEY` and `video_status` / `video_cancel` start with `FREE`

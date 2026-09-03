@@ -10,6 +10,7 @@ import (
 	"image/color"
 	"image/png"
 	"sync"
+	"time"
 
 	"github.com/toscodevjs/matriz/internal/providers"
 )
@@ -19,6 +20,10 @@ type FakeProvider struct {
 	mu          sync.Mutex
 	invocations int
 	outW, outH  int
+	jobs        map[string]*providers.VideoJob
+	jobResults  map[string]*providers.VideoResult
+	jobReqs     map[string]providers.VideoRequest
+	seq         int64
 }
 
 // SetOutputSize forces every image produced by Generate or Edit to a fixed size
@@ -33,7 +38,11 @@ func (f *FakeProvider) SetOutputSize(w, h int) {
 
 // NewFakeProvider initializes an offline FakeProvider instance.
 func NewFakeProvider() *FakeProvider {
-	return &FakeProvider{}
+	return &FakeProvider{
+		jobs:       make(map[string]*providers.VideoJob),
+		jobResults: make(map[string]*providers.VideoResult),
+		jobReqs:    make(map[string]providers.VideoRequest),
+	}
 }
 
 // Name returns the provider identifier.
@@ -50,6 +59,10 @@ func (f *FakeProvider) Capabilities() []providers.Capability {
 		providers.CapabilityRemoveBG,
 		providers.CapabilityUpscale,
 		providers.CapabilityDeterminism,
+		providers.CapabilityVideoDraft,
+		providers.CapabilityVideoFinal,
+		providers.CapabilityImageToVideo,
+		providers.CapabilityTextToVideo,
 	}
 }
 
@@ -62,7 +75,7 @@ func (f *FakeProvider) EstimateCostUSD(req providers.GenerateRequest) float64 {
 	return 0.01 * float64(count)
 }
 
-// Generate produces deterministic PNG image bytes derived from the prompt and seed.
+// Generate returns deterministic PNG images based on prompt and seed.
 func (f *FakeProvider) Generate(ctx context.Context, req providers.GenerateRequest) (*providers.Result, error) {
 	f.mu.Lock()
 	f.invocations++
@@ -73,11 +86,15 @@ func (f *FakeProvider) Generate(ctx context.Context, req providers.GenerateReque
 		count = 1
 	}
 
-	w := req.Width
+	var seed int64
+	if req.Seed != nil {
+		seed = *req.Seed
+	}
+
+	w, h := req.Width, req.Height
 	if w <= 0 {
 		w = 512
 	}
-	h := req.Height
 	if h <= 0 {
 		h = 512
 	}
@@ -88,20 +105,13 @@ func (f *FakeProvider) Generate(ctx context.Context, req providers.GenerateReque
 	}
 	f.mu.Unlock()
 
-	var seed int64
-	if req.Seed != nil {
-		seed = *req.Seed
-	} else {
-		seed = int64(f.InvocationCount() * 1000)
-	}
-
-	images := make([][]byte, 0, count)
+	images := make([][]byte, count)
 	for i := 0; i < count; i++ {
 		imgBytes, err := f.renderSolidImage(w, h, req.Prompt, seed+int64(i))
 		if err != nil {
 			return nil, fmt.Errorf("fake render failed: %w", err)
 		}
-		images = append(images, imgBytes)
+		images[i] = imgBytes
 	}
 
 	return &providers.Result{
@@ -143,6 +153,100 @@ func (f *FakeProvider) Edit(ctx context.Context, req providers.EditRequest) (*pr
 		Model:    "fake-nano-banana",
 		CostUSD:  0.01,
 	}, nil
+}
+
+// EstimateVideoCostUSD estimates the video generation cost based on duration.
+func (f *FakeProvider) EstimateVideoCostUSD(req providers.VideoRequest) float64 {
+	dur := req.DurationSec
+	if dur <= 0 {
+		dur = 5.0
+	}
+	return 0.05 * dur
+}
+
+// StartVideo initializes a mock video generation job.
+func (f *FakeProvider) StartVideo(ctx context.Context, req providers.VideoRequest) (*providers.VideoJob, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.invocations++
+	f.seq++
+
+	dur := req.DurationSec
+	if dur <= 0 {
+		dur = 5.0
+	}
+	fps := req.FPS
+	if fps <= 0 {
+		fps = 24
+	}
+
+	jobID := fmt.Sprintf("fake-job-%d", f.seq)
+	job := &providers.VideoJob{
+		ID:               jobID,
+		Provider:         "fake",
+		Model:            "fake-veo-turbo",
+		Status:           providers.VideoJobProcessing,
+		ProgressPct:      50,
+		CreatedAt:        time.Now().UTC(),
+		EstimatedCostUSD: f.EstimateVideoCostUSD(req),
+	}
+
+	var seed int64
+	if req.Seed != nil {
+		seed = *req.Seed
+	}
+
+	posterBytes, _ := f.renderSolidImage(512, 512, req.Prompt, seed)
+
+	res := &providers.VideoResult{
+		VideoBytes: []byte("fake-mp4-stream-bytes"),
+		PosterPNG:  posterBytes,
+		MIMEType:   "video/mp4",
+		Duration:   dur,
+		FPS:        fps,
+		Width:      1280,
+		Height:     720,
+		Seed:       seed,
+		Model:      "fake-veo-turbo",
+		CostUSD:    job.EstimatedCostUSD,
+	}
+
+	f.jobs[jobID] = job
+	f.jobResults[jobID] = res
+	f.jobReqs[jobID] = req
+	return job, nil
+}
+
+// PollVideo returns the current status and result for an asynchronous video job.
+func (f *FakeProvider) PollVideo(ctx context.Context, jobID string) (*providers.VideoJob, *providers.VideoResult, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	job, ok := f.jobs[jobID]
+	if !ok {
+		return nil, nil, fmt.Errorf("job %q not found", jobID)
+	}
+
+	// In test mode, transition from Processing to Completed on poll
+	job.Status = providers.VideoJobCompleted
+	job.ProgressPct = 100
+
+	res := f.jobResults[jobID]
+	return job, res, nil
+}
+
+// CancelVideo cancels an in-flight video generation job.
+func (f *FakeProvider) CancelVideo(ctx context.Context, jobID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	job, ok := f.jobs[jobID]
+	if !ok {
+		return fmt.Errorf("job %q not found", jobID)
+	}
+
+	job.Status = providers.VideoJobCancelled
+	return nil
 }
 
 // InvocationCount returns the number of times Generate or Edit was called.

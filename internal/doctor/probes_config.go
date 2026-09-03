@@ -17,8 +17,8 @@ func ProbeConfig(ctx context.Context, cfg *config.Config) CheckResult {
 		}
 	}
 
-	details := fmt.Sprintf("Provider: %s, Draft: %s, Final: %s, Budget: $%.2f, MaxCalls: %d",
-		cfg.Provider, cfg.ModelDraft, cfg.ModelFinal, cfg.BudgetUSD, cfg.MaxGenerativeCalls)
+	details := fmt.Sprintf("Provider: %s, Draft: %s, Final: %s, VideoDraft: %s, VideoFinal: %s, Budget: $%.2f, MaxCalls: %d",
+		cfg.Provider, cfg.ModelDraft, cfg.ModelFinal, cfg.ModelVideoDraft, cfg.ModelVideoFinal, cfg.BudgetUSD, cfg.MaxGenerativeCalls)
 
 	return CheckResult{
 		Name:    "Configuration & Budget",
