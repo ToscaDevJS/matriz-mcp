@@ -22,23 +22,9 @@ Registro de decisiones técnicas, verificaciones manuales y alcance diferido con
 - **Resolución**: Se removió completamente la dependencia `gen2brain/avif` y `tetratelabs/wazero`. Matriz ahora rechaza explícitamente cualquier solicitud de codificación AVIF en `core.ParseFormat` e `img_transform` con un mensaje accionable que instruye el uso de `.webp`, `.png` o `.jpg`/`.jpeg`. Los diagnósticos de `matriz doctor` verifican la terna operativa: PNG, JPEG y WebP.
 
 ## 5. `ImageConfig` y `CandidateCount` en generación de imágenes de Gemini
-- **Estado**: Asunción sin verificar contra la API real.
-- **Contexto**: `GenerateContentConfig.CandidateCount` (SDK `google.golang.org/genai` v1.70.0,
-  `types.go:2954`) ya se envía con el número de borradores solicitado. No se pudo comprobar
-  si los modelos de imagen lo respetan, porque hacerlo requiere clave y red.
-- **Mitigación aplicada**: el costo liquidado se calcula sobre `len(result.Images)`, no sobre
-  `req.Count`. Si Gemini ignora `CandidateCount` y devuelve una sola imagen, se cobra una sola
-  imagen. El presupuesto no se ve afectado en ninguno de los dos escenarios.
-- **Contexto adicional**: `GenerateContentConfig.ImageConfig` (`types.go:3041`) también se
-  envía ahora, con `AspectRatio` y `ImageSize` derivados de las dimensiones solicitadas.
-  Tampoco se pudo comprobar contra la API real si el modelo respeta ambos campos.
-- **Mitigación aplicada**: el sidecar y el `Asset` devuelto al modelo registran las
-  dimensiones **producidas**, decodificadas del archivo real. Si el modelo ignora
-  `AspectRatio`, la discrepancia queda visible en el registro en vez de silenciada.
-- **Acción**: ejecutar `img_generate_drafts` con `count: 4` y `aspect_ratio: "21:9"` con una
-  clave real. Registrar cuántas imágenes devuelve y con qué dimensiones. Si devuelve una
-  sola, evaluar N llamadas en paralelo; si ignora el ratio, revisar el mapeo de
-  `nearestAspectRatio`.
+- **Estado**: Resuelto el 2026-09-03.
+- **Hallazgo verificado en vivo**: Se ejecutó `img_generate_drafts` con `count: 4` contra la API real de Gemini AI Studio. La API de Google ignora `CandidateCount > 1` y devuelve únicamente 1 candidato por petición.
+- **Resolución**: Se implementó concurrencia paralela mediante goroutines (`generateConcurrent`) en `internal/providers/gemini/gemini.go`. Cuando `Count > 1`, se disparan $N$ peticiones en paralelo (concurrencia acotada a $\le 4$), con compensación de semillas deterministas (`seed + i`), tolerancia a fallos parciales y liquidación exacta de costos (`settledCostUSD`) según las imágenes efectivamente recibidas. AspectRatio verificado funcionando con ratios estándar (`16:9`, `1:1`).
 
 ## 6. `img_refine` no escribía sidecar
 - **Estado**: Resuelto el 2026-09-02.

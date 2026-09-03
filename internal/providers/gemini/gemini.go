@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync"
 
 	"github.com/toscodevjs/matriz/internal/providers"
 	"google.golang.org/genai"
@@ -71,7 +72,19 @@ func (g *GeminiProvider) EstimateCostUSD(req providers.GenerateRequest) float64 
 	return g.pricingTable.EstimateCostUSD(req)
 }
 
-// Generate invokes Gemini multimodal generation.
+// WorkerSeed returns the seed for the i-th worker in a concurrent generation batch.
+// Absent a caller-supplied seed, it returns nil so the provider picks seeds independently.
+func WorkerSeed(baseSeed *int64, workerIndex int) *int64 {
+	if baseSeed == nil {
+		return nil
+	}
+	s := *baseSeed + int64(workerIndex)
+	return &s
+}
+
+// Generate invokes Gemini multimodal generation. When req.Count > 1, it executes
+// concurrent requests in parallel because Gemini's image endpoint returns only one
+// candidate per call.
 func (g *GeminiProvider) Generate(ctx context.Context, req providers.GenerateRequest) (*providers.Result, error) {
 	if g.client == nil {
 		return nil, fmt.Errorf("gemini client not initialized (missing GOOGLE_API_KEY)")
@@ -87,6 +100,23 @@ func (g *GeminiProvider) Generate(ctx context.Context, req providers.GenerateReq
 		prompt = fmt.Sprintf("%s (Avoid: %s)", prompt, req.NegativePrompt)
 	}
 
+	count := req.Count
+	if count <= 0 {
+		count = 1
+	}
+
+	if count == 1 {
+		return g.generateSingle(ctx, modelID, prompt, req, req.Seed)
+	}
+
+	return g.generateConcurrent(ctx, modelID, prompt, req, count)
+}
+
+func (g *GeminiProvider) generateSingle(ctx context.Context, modelID, prompt string, req providers.GenerateRequest, seed *int64) (*providers.Result, error) {
+	singleReq := req
+	singleReq.Count = 1
+	singleReq.Seed = seed
+
 	contents := []*genai.Content{
 		{
 			Parts: []*genai.Part{
@@ -95,7 +125,7 @@ func (g *GeminiProvider) Generate(ctx context.Context, req providers.GenerateReq
 		},
 	}
 
-	resp, err := g.client.Models.GenerateContent(ctx, modelID, contents, buildGenerateConfig(req))
+	resp, err := g.client.Models.GenerateContent(ctx, modelID, contents, buildGenerateConfig(singleReq))
 	if err != nil {
 		return nil, fmt.Errorf("gemini generation failed: %w", err)
 	}
@@ -120,15 +150,103 @@ func (g *GeminiProvider) Generate(ctx context.Context, req providers.GenerateReq
 		return nil, fmt.Errorf("gemini returned no image parts in response")
 	}
 
-	var seed int64
-	if req.Seed != nil {
-		seed = *req.Seed
+	var resultSeed int64
+	if seed != nil {
+		resultSeed = *seed
 	}
 
 	return &providers.Result{
 		Images:   images,
 		MIMEType: mimeType,
-		Seed:     seed,
+		Seed:     resultSeed,
+		Model:    modelID,
+		CostUSD:  g.settledCostUSD(singleReq, len(images)),
+	}, nil
+}
+
+func (g *GeminiProvider) generateConcurrent(ctx context.Context, modelID, prompt string, req providers.GenerateRequest, count int) (*providers.Result, error) {
+	if count > 4 {
+		count = 4
+	}
+
+	type workerResult struct {
+		index int
+		image []byte
+		mime  string
+		seed  int64
+		err   error
+	}
+
+	resultsChan := make(chan workerResult, count)
+	var wg sync.WaitGroup
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	for i := 0; i < count; i++ {
+		wg.Add(1)
+		go func(workerIndex int) {
+			defer wg.Done()
+
+			workerSeed := WorkerSeed(req.Seed, workerIndex)
+			workerReq := req
+			workerReq.Count = 1
+			workerReq.Seed = workerSeed
+
+			singleRes, err := g.generateSingle(ctx, modelID, prompt, workerReq, workerSeed)
+			if err != nil {
+				resultsChan <- workerResult{index: workerIndex, err: err}
+				return
+			}
+
+			if len(singleRes.Images) > 0 {
+				resultsChan <- workerResult{
+					index: workerIndex,
+					image: singleRes.Images[0],
+					mime:  singleRes.MIMEType,
+					seed:  singleRes.Seed,
+				}
+			} else {
+				resultsChan <- workerResult{index: workerIndex, err: fmt.Errorf("no image returned")}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	close(resultsChan)
+
+	var images [][]byte
+	var firstErr error
+	var mimeType string = "image/png"
+	var baseSeed int64
+	if req.Seed != nil {
+		baseSeed = *req.Seed
+	}
+
+	for res := range resultsChan {
+		if res.err != nil {
+			if firstErr == nil {
+				firstErr = res.err
+			}
+			continue
+		}
+		images = append(images, res.image)
+		if res.mime != "" {
+			mimeType = res.mime
+		}
+	}
+
+	if len(images) == 0 {
+		if firstErr != nil {
+			return nil, fmt.Errorf("concurrent draft generation failed: %w", firstErr)
+		}
+		return nil, fmt.Errorf("all concurrent generations returned empty results")
+	}
+
+	return &providers.Result{
+		Images:   images,
+		MIMEType: mimeType,
+		Seed:     baseSeed,
 		Model:    modelID,
 		CostUSD:  g.settledCostUSD(req, len(images)),
 	}, nil

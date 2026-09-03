@@ -221,3 +221,26 @@ func TestImageSizeMatchesPricingTier(t *testing.T) {
 		}
 	}
 }
+
+func TestWorkerSeed_Offsetting(t *testing.T) {
+	// Nil seed preserves nil across all workers
+	if got := WorkerSeed(nil, 0); got != nil {
+		t.Errorf("WorkerSeed(nil, 0) = %v, want nil", got)
+	}
+	if got := WorkerSeed(nil, 3); got != nil {
+		t.Errorf("WorkerSeed(nil, 3) = %v, want nil", got)
+	}
+
+	// Base seed is correctly offset by worker index
+	base := int64(100)
+	for i := 0; i < 4; i++ {
+		got := WorkerSeed(&base, i)
+		if got == nil {
+			t.Fatalf("WorkerSeed(&100, %d) returned nil", i)
+		}
+		want := int64(100 + i)
+		if *got != want {
+			t.Errorf("WorkerSeed(&100, %d) = %d, want %d", i, *got, want)
+		}
+	}
+}
