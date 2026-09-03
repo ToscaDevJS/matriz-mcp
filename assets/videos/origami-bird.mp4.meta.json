@@ -1,0 +1,15 @@
+{
+  "schema": "matriz.sidecar/v1",
+  "ref": "assets/videos/origami-bird.mp4",
+  "origin": "generated",
+  "created_at": "2026-09-03T12:24:49.360357Z",
+  "provider": "gemini",
+  "prompt": "A vibrant origami paper bird flapping its wings gently in slow motion",
+  "seed": 0,
+  "params": {
+    "aspect_ratio": "16:9",
+    "duration_sec": 0,
+    "seeded": false
+  },
+  "cost_usd": 0.4
+}

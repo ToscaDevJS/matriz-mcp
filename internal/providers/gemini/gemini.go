@@ -489,7 +489,6 @@ func (g *GeminiProvider) StartVideo(ctx context.Context, req providers.VideoRequ
 	cfg := &genai.GenerateVideosConfig{
 		AspectRatio:     aspectRatio,
 		DurationSeconds: &dur,
-		FPS:             &fps,
 		NegativePrompt:  req.NegativePrompt,
 	}
 	if req.Seed != nil {
@@ -582,6 +581,12 @@ func (g *GeminiProvider) PollVideo(ctx context.Context, jobID string) (*provider
 	if firstVid != nil {
 		if len(firstVid.VideoBytes) > 0 {
 			videoBytes = firstVid.VideoBytes
+		} else if firstVid.URI != "" {
+			dlURI := genai.NewDownloadURIFromVideo(firstVid)
+			downloaded, err := g.client.Files.Download(ctx, dlURI, nil)
+			if err == nil && len(downloaded) > 0 {
+				videoBytes = downloaded
+			}
 		}
 		if firstVid.MIMEType != "" {
 			mimeType = firstVid.MIMEType
