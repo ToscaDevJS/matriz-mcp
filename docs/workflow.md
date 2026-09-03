@@ -58,6 +58,18 @@ flowchart TD
 
 ---
 
+### Fase 4: Generación y Animación de Video Asíncrono (`video_*`)
+* **Modelos**: `gemini-omni-1.1-flash` (Draft) / `veo-3.1-generate-preview` (Final cinemático).
+* **Coste**: Facturado por segundo de video generado ($0.10/s a $0.40/s).
+* **Propósito**: Clips de video para banners de cabecera (*Hero*), secciones interactivas o animación de imágenes fijas.
+* **Patrón Asíncrono para LLMs ("Call-Now, Fetch-Later")**:
+  1. **Despacho inicial**: Invocar `video_generate`. Si es para animar una imagen previa, pasar `ref: "assets/hero.png"`. Retorna inmediatamente con `job_id` y tiempo estimado (ej. ~45s).
+  2. **Regla de oro anti-bucles**: **NUNCA llamar a `video_status` en un bucle apretado de segundos consecutivos**. Informar al usuario del progreso, realizar otras tareas o esperar el intervalo sugerido.
+  3. **Consulta de estado (*Smart-Wait*)**: Llamar a `video_status` con `job_id`. La herramienta aplica una espera inteligente en el servidor (5s por defecto) para entregar el resultado en cuanto Google finalice.
+  4. **Entrega y Póster**: Al completarse, el video se guarda como `.mp4` en disco, se genera el sidecar `.meta.json` y se recibe un thumbnail póster PNG para validar el resultado.
+
+---
+
 ## Resumen de Reglas Clave para el Agente
 
 | Tarea Requerida | Herramienta Correcta | Coste |
@@ -66,5 +78,10 @@ flowchart TD
 | Convertir a WebP / JPEG / PNG | `img_transform` | **GRATIS ($0)** |
 | Ajustar brillo, contraste, nitidez | `img_transform` | **GRATIS ($0)** |
 | Crear nueva imagen desde texto | `img_generate_drafts` | **Facturado (Draft)** |
+| Elevar borrador a Pro de alta resolución | `img_upscale` | **Facturado (Pro)** |
 | Editar detalles, inpainting, quitar fondo | `img_refine` | **Facturado (Pro)** |
+| Iniciar video o animar imagen (Async) | `video_generate` | **Facturado ($/seg)** |
+| Consultar estado de render de video | `video_status` | **GRATIS ($0)** |
+| Cancelar video y liberar saldo retenido | `video_cancel` | **GRATIS ($0)** |
 | Consultar slots y dimensiones del sitio | `matriz://project/manifest` | **GRATIS ($0)** |
+| Consultar tareas de video activas | `matriz://jobs` | **GRATIS ($0)** |
