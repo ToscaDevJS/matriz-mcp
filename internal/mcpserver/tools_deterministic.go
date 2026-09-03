@@ -51,7 +51,7 @@ func handleTransform(cfg *config.Config) mcp.ToolHandlerFor[TransformIn, Transfo
 
 		srcImg, formatName, err := image.Decode(f)
 		if err != nil {
-			return toolError(fmt.Errorf("failed to decode image %s: %w", in.Ref, err), "Make sure the file is a valid PNG, JPEG, WebP, or AVIF image."), TransformOut{}, nil
+			return toolError(fmt.Errorf("failed to decode image %s: %w", in.Ref, err), "Make sure the file is a valid PNG, JPEG, or WebP image."), TransformOut{}, nil
 		}
 
 		resultImg := srcImg
@@ -100,8 +100,11 @@ func handleTransform(cfg *config.Config) mcp.ToolHandlerFor[TransformIn, Transfo
 			return toolError(err, "Failed to create destination directory."), TransformOut{}, nil
 		}
 
-		outFormat, _ := core.ParseFormat(filepath.Ext(outPath))
-		if outFormat == "" {
+		outFormat, err := core.ParseFormat(filepath.Ext(outPath))
+		if err != nil {
+			if filepath.Ext(outPath) != "" {
+				return toolError(err, "Supported output formats are .webp, .png, and .jpg / .jpeg."), TransformOut{}, nil
+			}
 			outFormat, _ = core.ParseFormat(formatName)
 			if outFormat == "" {
 				outFormat = core.FormatPNG

@@ -3,12 +3,13 @@ package core_test
 import (
 	"bytes"
 	"image"
+	"strings"
 	"testing"
 
 	"github.com/toscodevjs/matriz/internal/core"
 )
 
-func TestEncode_AllFormats(t *testing.T) {
+func TestEncode_SupportedFormats(t *testing.T) {
 	img := generateTestPattern(100, 100)
 
 	formats := []struct {
@@ -18,7 +19,6 @@ func TestEncode_AllFormats(t *testing.T) {
 		{core.FormatJPEG, "image/jpeg"},
 		{core.FormatPNG, "image/png"},
 		{core.FormatWebP, "image/webp"},
-		{core.FormatAVIF, "image/avif"},
 	}
 
 	for _, tt := range formats {
@@ -47,3 +47,17 @@ func TestEncode_AllFormats(t *testing.T) {
 		})
 	}
 }
+
+func TestParseFormat_RejectsAVIF(t *testing.T) {
+	cases := []string{"avif", ".avif", "AVIF", ".AVIF"}
+	for _, c := range cases {
+		_, err := core.ParseFormat(c)
+		if err == nil {
+			t.Fatalf("expected ParseFormat(%q) to fail, got nil", c)
+		}
+		if !strings.Contains(err.Error(), "AVIF encoding is disabled") {
+			t.Errorf("expected error to mention disabled AVIF, got: %v", err)
+		}
+	}
+}
+

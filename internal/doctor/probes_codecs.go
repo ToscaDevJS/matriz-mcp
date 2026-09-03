@@ -24,7 +24,6 @@ func ProbeCodecs(ctx context.Context) CheckResult {
 		core.FormatPNG,
 		core.FormatJPEG,
 		core.FormatWebP,
-		core.FormatAVIF,
 	}
 
 	for _, fmtType := range formats {
@@ -41,6 +40,6 @@ func ProbeCodecs(ctx context.Context) CheckResult {
 	return CheckResult{
 		Name:    "Go Runtime & Codecs",
 		Status:  StatusPass,
-		Message: fmt.Sprintf("%s runtime operational; PNG, JPEG, WebP, AVIF codecs verified", runtime.Version()),
+		Message: fmt.Sprintf("%s runtime operational; PNG, JPEG, WebP codecs verified", runtime.Version()),
 	}
 }

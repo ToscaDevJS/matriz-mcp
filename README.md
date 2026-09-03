@@ -36,7 +36,7 @@ flowchart TD
 1. **Client Assets are Sacred**: Original client assets (`origin: client`) are immutable. They are never overwritten, mutated in-place, or deleted.
 2. **Determinism is Free (0 Cost)**: Any operation that can be solved locally with standard algorithms (crops, resizes, color correction, format conversion) is executed locally in microseconds at zero financial cost.
 3. **Generative Operations Cost Money**: Model calls (Gemini) are strictly reserved for generating novel pixels (drafts, inpainting, outpainting, background removal) and are guarded by a fail-closed pre-flight budget guard.
-4. **Zero CGo / Pure Go & WASM**: Modern image codecs (AVIF, WebP, JPEG, PNG) run cleanly without requiring system C libraries or dynamic linking.
+4. **Zero CGo / Pure Go & WASM**: Modern image codecs (WebP, JPEG, PNG) run cleanly without requiring system C libraries or dynamic linking.
 5. **No Context Pollution**: High-resolution image bytes never cross the stdio MCP protocol stream. The server generates compact thumbnail previews (max 512px) embedded directly into `ImageContent` responses.
 6. **Sidecar Provenance**: Every generated or derived asset is paired with a `.meta.json` sidecar adhering to `matriz.sidecar/v1`.
 
@@ -66,7 +66,7 @@ Validate your Go runtime, codecs, configuration, and MCP integrations:
 ```text
 MATRIZ Doctor (v0.1.0) — Diagnostic Report
 
-[✓] Go Runtime & Codecs: go1.26.3 runtime operational; PNG, JPEG, WebP, AVIF codecs verified
+[✓] Go Runtime & Codecs: go1.26.3 runtime operational; PNG, JPEG, WebP codecs verified
 [✓] Configuration & Budget: Active provider "gemini", budget ceiling $2.00
 [✓] Google API Key: Key detected (AIza...XXXX)
 [✓] Project Structure: Valid matriz.json found (/workspace/matriz.json)

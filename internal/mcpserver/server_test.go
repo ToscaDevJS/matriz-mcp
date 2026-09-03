@@ -187,3 +187,27 @@ func TestT15_ToolDescriptions_CostMarkers(t *testing.T) {
 		}
 	}
 }
+
+func TestTransform_RejectsAVIFOutput(t *testing.T) {
+	_, _, tempDir, cfg, _, _ := setupTestServerWithContext(t, nil)
+	createTestPNG(t, tempDir, "assets/source.png", 200, 200)
+	ctx := context.Background()
+
+	res, err := mcpserver.CallTransform(ctx, cfg, mcpserver.TransformIn{
+		Ref:    "assets/source.png",
+		Output: "assets/output.avif",
+	})
+	if err != nil {
+		t.Fatalf("expected tool error not protocol error: %v", err)
+	}
+	if res == nil || !res.IsError {
+		t.Fatalf("expected CallToolResult.IsError == true for .avif output")
+	}
+	if len(res.Content) == 0 {
+		t.Fatalf("expected error content in result")
+	}
+	text, ok := res.Content[0].(*mcp.TextContent)
+	if !ok || !strings.Contains(text.Text, "AVIF encoding is disabled") {
+		t.Errorf("expected error to explain AVIF is disabled, got: %v", res.Content[0])
+	}
+}

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Removed
+- **`gen2brain/avif` dependency and AVIF encoding**: Pruned `github.com/gen2brain/avif` and `github.com/tetratelabs/wazero`. AVIF encoding is now explicitly rejected with actionable guidance directing callers to WebP (`.webp`), eliminating latency traps and reducing binary size.
 - **`img_export_web` MCP tool** and its supporting pipeline
   (`internal/core/export.go`) — cut before the v0.1.0 release. AVIF encoding via
   `gen2brain/avif` (libaom on wazero) measured 62s for the 420/768/1024w set

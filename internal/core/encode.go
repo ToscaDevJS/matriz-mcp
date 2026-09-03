@@ -8,7 +8,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/gen2brain/avif"
 	"github.com/gen2brain/webp"
 )
 
@@ -20,7 +19,6 @@ const (
 	FormatJPG  ImageFormat = "jpg"
 	FormatPNG  ImageFormat = "png"
 	FormatWebP ImageFormat = "webp"
-	FormatAVIF ImageFormat = "avif"
 )
 
 // ParseFormat normalizes a format string or file extension into an ImageFormat.
@@ -34,7 +32,7 @@ func ParseFormat(extOrFormat string) (ImageFormat, error) {
 	case "webp":
 		return FormatWebP, nil
 	case "avif":
-		return FormatAVIF, nil
+		return "", fmt.Errorf("unsupported image format %q: AVIF encoding is disabled due to WASM libaom latency (30s+); use \"webp\", \"png\", or \"jpeg\"", extOrFormat)
 	default:
 		return "", fmt.Errorf("unsupported image format: %q", extOrFormat)
 	}
@@ -49,8 +47,6 @@ func (f ImageFormat) MIMEType() string {
 		return "image/png"
 	case FormatWebP:
 		return "image/webp"
-	case FormatAVIF:
-		return "image/avif"
 	default:
 		return "application/octet-stream"
 	}
@@ -65,8 +61,6 @@ func (f ImageFormat) Extension() string {
 		return ".png"
 	case FormatWebP:
 		return ".webp"
-	case FormatAVIF:
-		return ".avif"
 	default:
 		return ""
 	}
@@ -87,8 +81,6 @@ func Encode(w io.Writer, img image.Image, format ImageFormat, quality int) error
 		return png.Encode(w, img)
 	case FormatWebP:
 		return webp.Encode(w, img, webp.Options{Quality: quality})
-	case FormatAVIF:
-		return avif.Encode(w, img, avif.Options{Quality: quality})
 	default:
 		return fmt.Errorf("unsupported encoding format: %q", format)
 	}

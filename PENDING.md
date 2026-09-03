@@ -17,25 +17,9 @@ Registro de decisiones técnicas, verificaciones manuales y alcance diferido con
   3. Necesidad de recorte de pelo fino superior con BiRefNet.
 
 ## 4. Codecs AVIF y WebP
-- **Estado**: Compilados y enlazados exitosamente vía WASM / pure Go (`gen2brain/avif` y `gen2brain/webp`) sin requerir dependencias de sistema CGo.
-- **Hallazgo (2026-09-02)**: compilan, pero el rendimiento de AVIF lo vuelve inviable para
-  iteración. Medición sobre una imagen de 1408x768 con `Quality: 80`:
-
-  | Ancho | AVIF | WebP |
-  |---|---|---|
-  | 420w | 6.598s | 4ms |
-  | 768w | 21.791s | 10ms |
-  | 1024w | 33.939s | 16ms |
-  | **Total secuencial** | **1m02.368s** | **30ms** |
-
-  La causa es que `gen2brain/avif` ejecuta libaom compilado a WASM sobre `wazero`
-  (sin SIMD nativo). WebP, con el mismo enfoque, no muestra el problema.
-- **Decisión tomada**: se eliminó la herramienta `img_export_web` de v0.1.0 (ver CHANGELOG).
-- **Riesgo abierto**: AVIF sigue alcanzable a través de `img_transform`, que infiere el
-  formato de salida desde la extensión del archivo. Un `output` terminado en `.avif`
-  bloquea la llamada MCP durante más de 30 segundos. No hay aviso al modelo.
-- **Acción**: decidir si `img_transform` debe rechazar AVIF, advertirlo en su descripción,
-  o si conviene sustituir el codec por uno nativo.
+- **Estado**: Resuelto el 2026-09-03.
+- **Hallazgo**: `gen2brain/avif` (libaom compilado a WASM sobre `wazero` sin SIMD nativo) generaba un cuello de botella de ~62s secuenciales contra 30ms de WebP (~2000x más lento).
+- **Resolución**: Se removió completamente la dependencia `gen2brain/avif` y `tetratelabs/wazero`. Matriz ahora rechaza explícitamente cualquier solicitud de codificación AVIF en `core.ParseFormat` e `img_transform` con un mensaje accionable que instruye el uso de `.webp`, `.png` o `.jpg`/`.jpeg`. Los diagnósticos de `matriz doctor` verifican la terna operativa: PNG, JPEG y WebP.
 
 ## 5. `ImageConfig` y `CandidateCount` en generación de imágenes de Gemini
 - **Estado**: Asunción sin verificar contra la API real.
