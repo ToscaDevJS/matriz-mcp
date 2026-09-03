@@ -9,12 +9,14 @@ Matriz expone cuatro herramientas estructuradas agrupadas bajo el prefijo `img_`
 | Recortar, encuadrar de nuevo | `img_transform` | 0 |
 | Cambiar tamaño | `img_transform` | 0 |
 | Corregir luz, contraste, saturación | `img_transform` | 0 |
-| Convertir a WebP/AVIF | `img_transform` | 0 |
+| Convertir a WebP / JPEG / PNG | `img_transform` | 0 |
 | Rotar, enderezar | `img_transform` | 0 |
 | Crear una imagen que no existe | `img_generate_drafts` | **paga** |
 | Quitar o sustituir el fondo | `img_refine` | **paga** |
 | Borrar un objeto de la foto | `img_refine` (inpaint) | **paga** |
 | Ampliar el encuadre más allá del borde | `img_refine` (outpaint) | **paga** |
+
+> Para una guía completa del ciclo de vida y mejores prácticas para agentes, ver [docs/workflow.md](workflow.md).
 
 ## Detalle de herramientas
 
@@ -24,7 +26,7 @@ Matriz expone cuatro herramientas estructuradas agrupadas bajo el prefijo `img_`
 
 ### `img_transform`
 - **Coste**: Gratuito (0) e instantáneo.
-- **Uso**: Operaciones locales de transformación (recorte, redimensionado, ajustes de brillo/contraste/saturación, rotación y enfoque) sin conexión a la red. El formato de salida se deduce de la extensión de `output`, por lo que también cubre la conversión a JPEG, PNG, WebP y AVIF.
+- **Uso**: Operaciones locales de transformación (recorte, redimensionado, ajustes de brillo/contraste/saturación, rotación y enfoque) sin conexión a la red. El formato de salida se deduce de la extensión de `output`, soportando conversión de alta velocidad a JPEG, PNG y WebP.
 
 ### `img_generate_drafts`
 - **Coste**: De pago (facturado por tokens del proveedor).
