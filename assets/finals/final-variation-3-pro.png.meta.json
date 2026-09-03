@@ -1,0 +1,19 @@
+{
+  "schema": "matriz.sidecar/v1",
+  "ref": "assets/finals/final-variation-3-pro.png",
+  "origin": "generated",
+  "created_at": "2026-09-03T11:00:27.683438Z",
+  "provider": "gemini",
+  "model": "gemini-3-pro-image-preview",
+  "prompt": "Enhance to high resolution and pro quality, ultra-detailed architectural textures, photorealistic reflections, sharp bioluminescent lighting",
+  "seed": 0,
+  "params": {
+    "height": 768,
+    "masked": false,
+    "operation": "inpaint",
+    "seeded": false,
+    "width": 1376
+  },
+  "cost_usd": 0.134,
+  "derived_from": "assets/drafts/draft-1788431456251361000-3.png"
+}

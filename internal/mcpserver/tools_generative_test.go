@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/toscodevjs/matriz/internal/budget"
 	"github.com/toscodevjs/matriz/internal/core"
 	"github.com/toscodevjs/matriz/internal/mcpserver"
 	"github.com/toscodevjs/matriz/internal/providers"
@@ -177,3 +178,69 @@ func TestGenerateDrafts_MultiDraft_FourVariants(t *testing.T) {
 	}
 	_ = tempDir
 }
+
+func TestUpscale_EndToEnd(t *testing.T) {
+	_, fp, tempDir, cfg, reg, guard := setupTestServerWithContext(t, nil)
+	fp.SetOutputSize(1920, 1080)
+
+	createTestPNG(t, tempDir, "assets/drafts/draft-1.png", 800, 600)
+
+	res, err := mcpserver.CallUpscale(context.Background(), cfg, reg, guard, mcpserver.UpscaleIn{
+		Ref:    "assets/drafts/draft-1.png",
+		Prompt: "pro quality 4k render",
+		Output: "assets/finals/hero-pro.png",
+	})
+	if err != nil {
+		t.Fatalf("CallUpscale returned an error: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("CallUpscale failed: %+v", res.Content)
+	}
+
+	out, ok := res.StructuredContent.(mcpserver.UpscaleOut)
+	if !ok {
+		t.Fatalf("StructuredContent is %T, want UpscaleOut", res.StructuredContent)
+	}
+
+	if out.Asset.Ref != "assets/finals/hero-pro.png" {
+		t.Errorf("Asset.Ref = %s, want assets/finals/hero-pro.png", out.Asset.Ref)
+	}
+	if out.Asset.Dims.Width != 1920 || out.Asset.Dims.Height != 1080 {
+		t.Errorf("Asset.Dims = %dx%d, want 1920x1080", out.Asset.Dims.Width, out.Asset.Dims.Height)
+	}
+
+	// Verify thumbnail is returned in Content
+	if len(res.Content) == 0 {
+		t.Fatal("expected thumbnail ImageContent in res.Content")
+	}
+
+	// Verify sidecar was written with derived_from
+	sidecar, err := core.ReadSidecar(filepath.Join(tempDir, "assets/finals/hero-pro.png"))
+	if err != nil {
+		t.Fatalf("reading upscaled sidecar: %v", err)
+	}
+	if sidecar.DerivedFrom == nil || string(*sidecar.DerivedFrom) != "assets/drafts/draft-1.png" {
+		t.Errorf("sidecar.DerivedFrom = %v, want %q", sidecar.DerivedFrom, "assets/drafts/draft-1.png")
+	}
+}
+
+func TestUpscale_BudgetExhausted(t *testing.T) {
+	exhaustedGuard := budget.NewGuard(0.00, 0)
+	_, fp, tempDir, cfg, reg, guard := setupTestServerWithContext(t, exhaustedGuard)
+	createTestPNG(t, tempDir, "assets/drafts/draft-1.png", 800, 600)
+
+	res, err := mcpserver.CallUpscale(context.Background(), cfg, reg, guard, mcpserver.UpscaleIn{
+		Ref:    "assets/drafts/draft-1.png",
+		Output: "assets/finals/hero-pro.png",
+	})
+	if err != nil {
+		t.Fatalf("unexpected protocol error: %v", err)
+	}
+	if res == nil || !res.IsError {
+		t.Fatalf("expected CallToolResult.IsError == true when budget exhausted")
+	}
+	if fp.InvocationCount() != 0 {
+		t.Fatalf("expected 0 provider calls when budget is exhausted, got %d", fp.InvocationCount())
+	}
+}
+

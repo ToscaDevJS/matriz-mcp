@@ -7,6 +7,7 @@ import (
 	"github.com/toscodevjs/matriz/internal/budget"
 	"github.com/toscodevjs/matriz/internal/config"
 	"github.com/toscodevjs/matriz/internal/providers"
+	"github.com/toscodevjs/matriz/internal/version"
 )
 
 // ServerContext bundles dependencies for tool handlers.
@@ -73,6 +74,19 @@ var (
 			Title:           "Refine and Edit Image",
 		},
 	}
+
+	ToolUpscale = &mcp.Tool{
+		Name: "img_upscale",
+		Description: "COSTS MONEY and takes seconds. Elevates a draft image to pro high-resolution quality " +
+			"using the final generative model. Do NOT use for standard crops or filters — use img_transform for those.",
+		Annotations: &mcp.ToolAnnotations{
+			ReadOnlyHint:    false,
+			DestructiveHint: &destrFalse,
+			IdempotentHint:  false,
+			OpenWorldHint:   &openWorldTrue,
+			Title:           "Upscale Draft to Pro Quality",
+		},
+	}
 )
 
 // GetToolDefinitions returns all tool definitions for assertions and introspection.
@@ -82,6 +96,7 @@ func GetToolDefinitions() []*mcp.Tool {
 		ToolTransform,
 		ToolGenerateDrafts,
 		ToolRefine,
+		ToolUpscale,
 	}
 }
 
@@ -89,7 +104,7 @@ func GetToolDefinitions() []*mcp.Tool {
 func NewServer(cfg *config.Config, reg *providers.Registry, guard *budget.Guard) *mcp.Server {
 	srv := mcp.NewServer(&mcp.Implementation{
 		Name:    "matriz",
-		Version: "v0.1.0",
+		Version: version.Version,
 	}, nil)
 
 	RegisterTools(srv, cfg, reg, guard)
@@ -97,12 +112,13 @@ func NewServer(cfg *config.Config, reg *providers.Registry, guard *budget.Guard)
 	return srv
 }
 
-// RegisterTools registers all 4 image management tools.
+// RegisterTools registers all image management tools.
 func RegisterTools(srv *mcp.Server, cfg *config.Config, reg *providers.Registry, guard *budget.Guard) {
 	mcp.AddTool(srv, ToolListModels, handleListModels(cfg, reg, guard))
 	mcp.AddTool(srv, ToolTransform, handleTransform(cfg))
 	mcp.AddTool(srv, ToolGenerateDrafts, handleGenerateDrafts(cfg, reg, guard))
 	mcp.AddTool(srv, ToolRefine, handleRefine(cfg, reg, guard))
+	mcp.AddTool(srv, ToolUpscale, handleUpscale(cfg, reg, guard))
 }
 
 // CallTransform executes img_transform handler directly for testing.
@@ -158,3 +174,20 @@ func CallRefine(ctx context.Context, cfg *config.Config, reg *providers.Registry
 	}
 	return res, nil
 }
+
+// CallUpscale executes img_upscale handler directly for testing.
+func CallUpscale(ctx context.Context, cfg *config.Config, reg *providers.Registry, guard *budget.Guard, in UpscaleIn) (*mcp.CallToolResult, error) {
+	handler := handleUpscale(cfg, reg, guard)
+	res, out, err := handler(ctx, &mcp.CallToolRequest{}, in)
+	if err != nil {
+		return res, err
+	}
+	if res == nil {
+		res = &mcp.CallToolResult{}
+	}
+	if res.StructuredContent == nil {
+		res.StructuredContent = out
+	}
+	return res, nil
+}
+

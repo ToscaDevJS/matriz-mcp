@@ -267,6 +267,125 @@ func handleRefine(cfg *config.Config, reg *providers.Registry, guard *budget.Gua
 	}
 }
 
+type UpscaleIn struct {
+	Ref    string `json:"ref" jsonschema:"source draft asset reference to upscale"`
+	Prompt string `json:"prompt,omitempty" jsonschema:"optional enhancement prompt or fine detail instructions"`
+	Output string `json:"output" jsonschema:"project-relative path to write upscaled result"`
+	Seed   *int64 `json:"seed,omitempty" jsonschema:"optional seed"`
+}
+
+type UpscaleOut struct {
+	Asset      core.Asset `json:"asset"`
+	CostUSD    float64    `json:"cost_usd"`
+	BudgetLeft float64    `json:"budget_left_usd"`
+}
+
+func handleUpscale(cfg *config.Config, reg *providers.Registry, guard *budget.Guard) mcp.ToolHandlerFor[UpscaleIn, UpscaleOut] {
+	return func(ctx context.Context, req *mcp.CallToolRequest, in UpscaleIn) (*mcp.CallToolResult, UpscaleOut, error) {
+		provider, err := reg.Get(cfg.Provider)
+		if err != nil {
+			return toolError(err, "Check MATRIZ_PROVIDER configuration."), UpscaleOut{}, nil
+		}
+
+		srcRef := core.AssetRef(in.Ref)
+		srcPath, err := core.ResolveRef(cfg.ProjectRoot, srcRef)
+		if err != nil {
+			return toolError(err, "Check input ref path."), UpscaleOut{}, nil
+		}
+
+		srcBytes, err := os.ReadFile(srcPath)
+		if err != nil {
+			return toolError(err, "Source asset could not be read."), UpscaleOut{}, nil
+		}
+
+		prompt := in.Prompt
+		if prompt == "" {
+			prompt = "Enhance image resolution and visual fidelity to pro quality, preserving composition and details."
+		}
+
+		editReq := providers.EditRequest{
+			Source:    srcBytes,
+			Prompt:    prompt,
+			Operation: providers.CapabilityUpscale,
+			Seed:      in.Seed,
+			Model:     cfg.ModelFinal,
+		}
+
+		estimatedCost := provider.EstimateCostUSD(providers.GenerateRequest{
+			Model: cfg.ModelFinal,
+			Count: 1,
+		})
+
+		if err := guard.Reserve(estimatedCost); err != nil {
+			return toolError(err, "Deterministic operations via img_transform are free and do not require budget."), UpscaleOut{}, nil
+		}
+
+		result, err := provider.Edit(ctx, editReq)
+		if err != nil {
+			return toolError(err, "Provider upscale failed."), UpscaleOut{}, nil
+		}
+
+		guard.Commit(result.CostUSD)
+
+		if len(result.Images) == 0 {
+			return toolError(
+				fmt.Errorf("provider %s returned no image for upscale", provider.Name()),
+				"The provider accepted the request but produced no image. Try a different prompt.",
+			), UpscaleOut{}, nil
+		}
+
+		outRef := core.AssetRef(in.Output)
+		if outRef == "" {
+			outRef = core.AssetRef(fmt.Sprintf("assets/upscaled-%d.png", time.Now().UnixNano()))
+		}
+		outPath, err := core.ResolveRef(cfg.ProjectRoot, outRef)
+		if err != nil {
+			return toolError(err, "Invalid output path."), UpscaleOut{}, nil
+		}
+
+		if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {
+			return toolError(err, "Failed to create the destination directory."), UpscaleOut{}, nil
+		}
+		if err := os.WriteFile(outPath, result.Images[0], 0644); err != nil {
+			return toolError(err, "Failed to write the upscaled image."), UpscaleOut{}, nil
+		}
+
+		var dims core.Dimensions
+		var thumb *mcp.ImageContent
+		if decoded, _, decErr := image.Decode(bytes.NewReader(result.Images[0])); decErr == nil {
+			dims = core.Dimensions{
+				Width:  decoded.Bounds().Dx(),
+				Height: decoded.Bounds().Dy(),
+			}
+			thumb, _ = thumbnailContent(decoded, 512)
+		}
+
+		sidecar := providers.BuildEditSidecar(outRef, provider.Name(), result, editReq, srcRef, dims)
+		_ = core.WriteSidecar(outPath, sidecar)
+
+		asset := core.Asset{
+			Ref:      outRef,
+			Origin:   core.OriginGenerated,
+			MIMEType: result.MIMEType,
+			Dims:     dims,
+			Bytes:    int64(len(result.Images[0])),
+		}
+
+		var content []mcp.Content
+		if thumb != nil {
+			content = append(content, thumb)
+		}
+
+		return &mcp.CallToolResult{
+			Content: content,
+		}, UpscaleOut{
+			Asset:      asset,
+			CostUSD:    result.CostUSD,
+			BudgetLeft: guard.BudgetLeft(),
+		}, nil
+	}
+}
+
 func parseAspectRatio(ratio string, maxEdge int) (int, int) {
 	if maxEdge <= 0 {
 		maxEdge = 768

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-03
+
+### Added
+- **`img_upscale` dedicated MCP tool**:
+  - Implemented `ToolUpscale` and `handleUpscale` in `internal/mcpserver/tools_generative.go` using `CapabilityUpscale` and the final pro model (`gemini-3-pro-image-preview`).
+  - Strict SRP separation: decouples quality/resolution elevation from localized inpainting/outpainting (`img_refine`).
+  - Full provenance tracking via `.meta.json` sidecars recording `derived_from` source draft.
+  - Standardized visual thumbnail preview generation (max edge <= 512px) returned via MCP stdio protocol.
+  - Pre-flight budget guard protection failing closed on exhausted budget.
+- **Agent Workflow Guidance & MCP Instructions**:
+  - Added `instructions.md` under `~/.gemini/antigravity-cli/mcp/matriz/` establishing the two-stage pipeline: draft generation -> pro elevation via `img_upscale` -> deterministic transformation.
+  - Added JSON schema `img_upscale.json`.
+- **Test Suite & Spec**:
+  - Added end-to-end integration and failure tests `TestUpscale_EndToEnd` and `TestUpscale_BudgetExhausted`.
+  - Updated MCP server specification `openspec/specs/mcp-server/spec.md` with requirement and scenarios for upscaling.
+
 ### Removed
 - **`gen2brain/avif` dependency and AVIF encoding**: Pruned `github.com/gen2brain/avif` and `github.com/tetratelabs/wazero`. AVIF encoding is now explicitly rejected with actionable guidance directing callers to WebP (`.webp`), eliminating latency traps and reducing binary size.
 - **`img_export_web` MCP tool** and its supporting pipeline

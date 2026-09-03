@@ -169,9 +169,13 @@ func TestT14_GenerateDrafts_BudgetExhausted_NoProviderCall(t *testing.T) {
 func TestT15_ToolDescriptions_CostMarkers(t *testing.T) {
 	tools := mcpserver.GetToolDefinitions()
 
+	var foundUpscale bool
 	for _, tool := range tools {
+		if tool.Name == "img_upscale" {
+			foundUpscale = true
+		}
 		switch tool.Name {
-		case "img_generate_drafts", "img_refine":
+		case "img_generate_drafts", "img_refine", "img_upscale":
 			if !strings.HasPrefix(tool.Description, "COSTS MONEY") {
 				t.Errorf("tool %s description must start with COSTS MONEY, got %q", tool.Name, tool.Description)
 			}
@@ -185,6 +189,9 @@ func TestT15_ToolDescriptions_CostMarkers(t *testing.T) {
 				t.Errorf("meta tool description unexpected: %s", tool.Description)
 			}
 		}
+	}
+	if !foundUpscale {
+		t.Errorf("expected img_upscale to be registered in GetToolDefinitions()")
 	}
 }
 

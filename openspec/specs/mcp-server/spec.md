@@ -14,12 +14,20 @@ The system MUST run exclusively over MCP `StdioTransport` without writing debug 
 - THEN it initializes tools and resources and communicates purely via JSON-RPC on stdio
 
 ### Requirement: Image Management Tools
-The system MUST expose 4 tools: `img_list_models`, `img_transform`, `img_generate_drafts`, and `img_refine`, with deterministic tools marked `FREE` and generative tools marked `COSTS MONEY`.
+The system MUST expose 5 tools: `img_list_models`, `img_transform`, `img_generate_drafts`, `img_refine`, and `img_upscale`, with deterministic tools marked `FREE` and generative tools marked `COSTS MONEY`.
 
 #### Scenario: Generative tool description verification
 - GIVEN the tool registry
 - WHEN tool descriptions are inspected
 - THEN generative tools start with `COSTS MONEY` and deterministic tools start with `FREE`
+
+### Requirement: Dedicated Upscale Tool Exposure
+The system MUST expose `img_upscale` to elevate low-resolution drafts into final production-grade assets using `CapabilityUpscale` and `ModelFinal`.
+
+#### Scenario: Successful draft upscale
+- GIVEN an existing draft asset
+- WHEN `img_upscale` is invoked
+- THEN the tool produces the upscaled asset on disk, writes a `.meta.json` sidecar with `derived_from`, and returns an `ImageContent` thumbnail <= 512px max edge
 
 ### Requirement: Thumbnail Return via Protocol
 The system MUST return visual feedback as `*mcp.ImageContent` with dimensions capped at 512px max edge for every tool creating or modifying images, while keeping full-resolution files on disk.

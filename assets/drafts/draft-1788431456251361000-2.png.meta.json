@@ -1,0 +1,16 @@
+{
+  "schema": "matriz.sidecar/v1",
+  "ref": "assets/drafts/draft-1788431456251361000-2.png",
+  "origin": "generated",
+  "created_at": "2026-09-03T10:30:56.343811Z",
+  "provider": "gemini",
+  "model": "gemini-3.1-flash-lite-image",
+  "prompt": "A futuristic architectural pavilion made of curved bioluminescent glass and polished concrete, nestled in a misty pine forest at twilight, glowing ambient light, hyper-detailed, architectural photography, cinematic",
+  "seed": 0,
+  "params": {
+    "height": 768,
+    "seeded": false,
+    "width": 1376
+  },
+  "cost_usd": 0.0336
+}
