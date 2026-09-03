@@ -64,7 +64,7 @@ Validate your Go runtime, codecs, configuration, and MCP integrations:
 ```
 
 ```text
-MATRIZ Doctor (v0.1.0) — Diagnostic Report
+MATRIZ Doctor (v0.2.0) — Diagnostic Report
 
 [✓] Go Runtime & Codecs: go1.26.3 runtime operational; PNG, JPEG, WebP codecs verified
 [✓] Configuration & Budget: Active provider "gemini", budget ceiling $2.00
@@ -128,9 +128,10 @@ All MCP tools are grouped under the `img_` prefix:
 | Resize / Scale | `img_transform` | ❌ No | **FREE ($0.00)** |
 | Brightness / Contrast / Saturation | `img_transform` | ❌ No | **FREE ($0.00)** |
 | Rotate / Sharpen | `img_transform` | ❌ No | **FREE ($0.00)** |
-| Convert to AVIF / WebP / JPEG / PNG | `img_transform` | ❌ No | **FREE ($0.00)** |
+| Convert to WebP / JPEG / PNG | `img_transform` | ❌ No | **FREE ($0.00)** |
 | Generate new image drafts from prompt | `img_generate_drafts` | ✅ Yes | **Paid (Tokens)** |
 | Inpaint / Outpaint / Remove background | `img_refine` | ✅ Yes | **Paid (Tokens)** |
+| Elevate draft to high-resolution Pro quality | `img_upscale` | ✅ Yes | **Paid (Tokens)** |
 | Inspect active provider & budget | `img_list_models` | ❌ No | **FREE ($0.00)** |
 
 ### MCP Resource: Project Manifest
@@ -200,9 +201,9 @@ Add Matriz to your workspace or global MCP settings (`~/.cursor/mcp.json`):
 ## 💡 Senior Architect Recommendations
 
 1. **Always Read the Manifest First**: Direct your LLM prompts to inspect `matriz://project/manifest` before generating drafts. This ensures correct aspect ratios (`21:9`, `16:9`) and prevents aspect ratio mismatches.
-2. **Favor Deterministic Transformations**: Never use `img_refine` for contrast, cropping, or resizing. `img_transform` is instantaneous, 100% deterministic, offline, and free.
-3. **Use Drafts Before Final Refinements**: Generate 3–4 draft variations at low resolution (max 768px) with `img_generate_drafts`, review the embedded thumbnail previews, and refine only the chosen candidate.
-4. **Pick the Output Format via the Extension**: `img_transform` infers the encoder from the `output` path extension, so writing to `.avif` or `.webp` converts the asset in the same free, deterministic pass as the crop or resize.
+2. **Favor Deterministic Transformations**: Never use `img_refine` or `img_upscale` for contrast, cropping, or resizing. `img_transform` is instantaneous, 100% deterministic, offline, and free.
+3. **Use Drafts Before Final Elevation**: Generate 3–4 draft variations at low resolution (max 768px) with `img_generate_drafts`, review the embedded thumbnail previews, and elevate only the chosen candidate using `img_upscale` (with Gemini Pro).
+4. **Pick the Output Format via the Extension**: `img_transform` infers the encoder from the `output` path extension, so writing to `.webp` or `.png` converts the asset in the same free, deterministic pass as the crop or resize.
 
 ---
 
