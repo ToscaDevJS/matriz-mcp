@@ -149,3 +149,31 @@ func TestRefine_EmptyProviderResultIsAToolError(t *testing.T) {
 		t.Fatal("want IsError=true when the provider returns no images")
 	}
 }
+
+func TestGenerateDrafts_MultiDraft_FourVariants(t *testing.T) {
+	_, _, tempDir, cfg, reg, guard := setupTestServerWithContext(t, nil)
+
+	res, err := mcpserver.CallGenerateDrafts(context.Background(), cfg, reg, guard, mcpserver.GenerateDraftsIn{
+		Prompt:      "artisan roasted coffee",
+		Count:       4,
+		AspectRatio: "1:1",
+	})
+	if err != nil {
+		t.Fatalf("CallGenerateDrafts failed: %v", err)
+	}
+	if res.IsError {
+		t.Fatalf("CallGenerateDrafts returned error: %+v", res.Content)
+	}
+
+	out, ok := res.StructuredContent.(mcpserver.GenerateDraftsOut)
+	if !ok {
+		t.Fatalf("StructuredContent is %T, want GenerateDraftsOut", res.StructuredContent)
+	}
+	if len(out.Drafts) != 4 {
+		t.Fatalf("got %d drafts, want 4", len(out.Drafts))
+	}
+	if len(res.Content) != 4 {
+		t.Errorf("got %d thumbnail contents, want 4", len(res.Content))
+	}
+	_ = tempDir
+}
