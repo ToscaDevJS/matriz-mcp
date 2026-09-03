@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100 font-mono select-none">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matriz Curation TUI — Interactive Tailwind Mockup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            matriz: {
+              purple: '#7D56F4',
+              pink: '#EE6FF8',
+              dark: '#0B0F19',
+              panel: '#111827',
+              border: '#1F2937',
+              highlight: '#1E293B',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b0f19; }
+    ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #374151; }
+  </style>
+</head>
+<body class="h-full flex flex-col p-4 md:p-6 gap-4 max-w-7xl mx-auto overflow-hidden">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-purple-700 via-indigo-700 to-slate-900 rounded-lg shadow-lg border border-purple-500/30">
+    <div class="flex items-center gap-3">
+      <span class="text-xl">⚡</span>
+      <h1 class="font-bold tracking-tight text-white flex items-center gap-2">
+        <span>MATRIZ Curation & Assets TUI</span>
+        <span class="text-xs bg-black/40 text-amber-300 px-2 py-0.5 rounded border border-amber-400/20" id="headerProjectName">coffee-roastery-web</span>
+      </h1>
+    </div>
+    <div class="flex items-center gap-2 text-xs">
+      <span class="bg-black/40 px-2.5 py-1 rounded text-purple-200 border border-purple-400/20">v0.1.0</span>
+      <span class="bg-black/40 px-2.5 py-1 rounded text-emerald-300 border border-emerald-500/20 flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        Provider: Gemini 3.1
+      </span>
+    </div>
+  </header>
+
+  <!-- Metrics / Financial Stats Grid -->
+  <section class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+    <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3.5 flex flex-col gap-1 shadow-sm">
+      <span class="text-slate-400 uppercase tracking-wider text-[10px]">Total Generative Spend</span>
+      <div class="text-xl font-bold text-pink-400 flex items-baseline gap-1">
+        <span id="statSpent">$0.2016</span>
+        <span class="text-xs font-normal text-slate-400">USD</span>
+      </div>
+      <div class="text-[11px] text-emerald-400 mt-0.5">4.0% of $5.00 ceiling</div>
+    </div>
+
+    <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3.5 flex flex-col gap-1 shadow-sm">
+      <span class="text-slate-400 uppercase tracking-wider text-[10px]">Safe Budget Remaining</span>
+      <div class="text-xl font-bold text-emerald-400 flex items-baseline gap-1">
+        <span id="statRemaining">$4.7984</span>
+        <span class="text-xs font-normal text-slate-400">USD</span>
+      </div>
+      <div class="text-[11px] text-slate-400 mt-0.5">17 calls left safe</div>
+    </div>
+
+    <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3.5 flex flex-col gap-1 shadow-sm">
+      <span class="text-slate-400 uppercase tracking-wider text-[10px]">Manifest Slots</span>
+      <div class="text-xl font-bold text-cyan-400 flex items-baseline gap-1">
+        <span id="statSlots">2</span>
+        <span class="text-xs font-normal text-slate-400">Total</span>
+      </div>
+      <div class="text-[11px] text-amber-300 mt-0.5" id="statSlotsSub">1 bound • 1 empty</div>
+    </div>
+
+    <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3.5 flex flex-col gap-1 shadow-sm">
+      <span class="text-slate-400 uppercase tracking-wider text-[10px]">Assets In Project</span>
+      <div class="text-xl font-bold text-amber-400 flex items-baseline gap-1">
+        <span id="statAssets">4</span>
+        <span class="text-xs font-normal text-slate-400">Files</span>
+      </div>
+      <div class="text-[11px] text-slate-400 mt-0.5">3 drafts • 1 webp final</div>
+    </div>
+  </section>
+
+  <!-- Main 3-Column Terminal Workspace -->
+  <main class="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 min-h-0">
+
+    <!-- Column 1: Slots Panel (3 cols) -->
+    <div id="panelSlots" class="md:col-span-3 bg-slate-900/90 border border-slate-800 rounded-lg flex flex-col overflow-hidden transition-all">
+      <div class="px-3.5 py-2.5 bg-slate-800/60 border-b border-slate-800 flex justify-between items-center text-xs font-semibold">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+          SLOTS (matriz.json)
+        </span>
+        <span id="badgeSlots" class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">Tab 1</span>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-2 space-y-1.5" id="slotsList">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Palette Drawer -->
+      <div class="p-3 border-t border-slate-800/80 bg-slate-950/40">
+        <div class="text-[10px] uppercase tracking-wider text-slate-400 mb-2">Project Palette</div>
+        <div class="flex items-center gap-2" id="paletteRow">
+          <!-- Swatches rendered dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 2: Assets Ledger Panel (5 cols) -->
+    <div id="panelAssets" class="md:col-span-5 bg-slate-900/90 border border-purple-500/40 ring-1 ring-purple-500/20 rounded-lg flex flex-col overflow-hidden transition-all">
+      <div class="px-3.5 py-2.5 bg-slate-800/60 border-b border-slate-800 flex justify-between items-center text-xs font-semibold">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-pink-500"></span>
+          ASSETS INVENTORY & COST
+        </span>
+        <span id="badgeAssets" class="text-[10px] bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30">Active Panel</span>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-2 space-y-1.5" id="assetsList">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Column 3: Inspector & Visual Preview (4 cols) -->
+    <div class="md:col-span-4 bg-slate-900/90 border border-slate-800 rounded-lg flex flex-col overflow-hidden">
+      <div class="px-3.5 py-2.5 bg-slate-800/60 border-b border-slate-800 flex justify-between items-center text-xs font-semibold">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+          SIDECAR INSPECTOR
+        </span>
+        <span class="text-[10px] bg-cyan-950 text-cyan-300 px-2 py-0.5 rounded border border-cyan-800">.meta.json</span>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-4 space-y-3 text-xs" id="inspectorContent">
+        <!-- Visual Thumbnail -->
+        <div class="h-44 bg-slate-950 border border-slate-800 rounded-md overflow-hidden flex items-center justify-center p-2 relative group">
+          <img id="inspImage" src="" alt="Thumbnail" class="max-h-full max-w-full object-contain rounded transition-transform duration-200 group-hover:scale-105">
+          <span id="inspThumbBadge" class="absolute bottom-2 right-2 text-[10px] bg-black/70 backdrop-blur px-2 py-0.5 rounded text-slate-300">
+            Preview
+          </span>
+        </div>
+
+        <!-- Metadata Properties -->
+        <div class="space-y-1.5 divide-y divide-slate-800/70 text-[11px]">
+          <div class="flex justify-between items-center py-1">
+            <span class="text-slate-400">Asset Ref:</span>
+            <span class="font-bold text-slate-200 truncate max-w-[190px]" id="inspRef">-</span>
+          </div>
+          <div class="flex justify-between items-center py-1">
+            <span class="text-slate-400">Dimensions:</span>
+            <span class="text-slate-200" id="inspDims">-</span>
+          </div>
+          <div class="flex justify-between items-center py-1">
+            <span class="text-slate-400">Origin / Type:</span>
+            <span class="font-semibold" id="inspOrigin">-</span>
+          </div>
+          <div class="flex justify-between items-center py-1">
+            <span class="text-slate-400">Cost USD:</span>
+            <span class="font-bold" id="inspCost">-</span>
+          </div>
+          <div class="flex justify-between items-center py-1" id="inspDerivedRow">
+            <span class="text-slate-400">Derived From:</span>
+            <span class="text-cyan-300 truncate max-w-[190px]" id="inspDerived">-</span>
+          </div>
+          <div class="flex justify-between items-center py-1" id="inspTransformRow">
+            <span class="text-slate-400">Pipeline:</span>
+            <span class="text-amber-300 text-[10px] truncate max-w-[190px]" id="inspTransform">-</span>
+          </div>
+        </div>
+
+        <!-- Prompt Card -->
+        <div class="space-y-1 pt-1" id="inspPromptSection">
+          <span class="text-[10px] uppercase tracking-wider text-slate-400">Generation Prompt</span>
+          <div class="p-2.5 bg-slate-950 border border-slate-800/80 rounded text-[11px] leading-relaxed text-slate-300 italic max-h-24 overflow-y-auto" id="inspPrompt">
+            -
+          </div>
+        </div>
+
+        <!-- Action Buttons in Inspector -->
+        <div class="pt-2 grid grid-cols-2 gap-2">
+          <button id="btnBind" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded text-xs font-semibold transition-colors flex items-center justify-center gap-1">
+            <span>📌</span> Bind to Slot
+          </button>
+          <button id="btnTransform" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-semibold border border-slate-700 transition-colors flex items-center justify-center gap-1">
+            <span>⚡</span> Convert WebP
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Terminal Status Line & Keybindings Footer -->
+  <footer class="bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 flex flex-col md:flex-row justify-between items-center text-[11px] text-slate-400 gap-2">
+    <!-- Status Toast -->
+    <div class="flex items-center gap-2 truncate">
+      <span class="text-purple-400 font-bold">STATUS:</span>
+      <span class="text-slate-200" id="statusLine">Ready. Use ↑/↓ or click to navigate. Press 'Tab' to switch panels.</span>
+    </div>
+
+    <!-- Shortcut Pills -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="flex items-center gap-1"><kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-purple-300 border border-slate-700 font-bold">↑/↓</kbd> navigate</span>
+      <span class="flex items-center gap-1"><kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-purple-300 border border-slate-700 font-bold">Tab</kbd> switch</span>
+      <span class="flex items-center gap-1"><kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-purple-300 border border-slate-700 font-bold">b</kbd> bind</span>
+      <span class="flex items-center gap-1"><kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-purple-300 border border-slate-700 font-bold">t</kbd> webp</span>
+      <span class="flex items-center gap-1"><kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-purple-300 border border-slate-700 font-bold">o</kbd> open</span>
+    </div>
+  </footer>
+
+  <!-- Application Logic & State Controller -->
+  <script>
+    // State Store mirroring Matriz Go core & manifest
+    const state = {
+      project: "coffee-roastery-web",
+      palette: ["#1A1A1A", "#8D5B4C", "#D9B99B", "#F5F0EB"],
+      activePanel: "assets", // "slots" or "assets"
+      selectedSlotIndex: 0,
+      selectedAssetIndex: 0,
+      slots: [
+        {
+          id: "product-highlight",
+          usage: "Featured coffee bag package on homepage",
+          aspect_ratio: "1:1",
+          min_width: 600,
+          asset: "assets/products/ethiopia-yirgacheffe.webp",
+          alt: "Artisan coffee beans package with minimalist typography"
+        },
+        {
+          id: "hero-cover",
+          usage: "Main landing page hero banner",
+          aspect_ratio: "16:9",
+          min_width: 1200,
+          asset: "",
+          alt: "Modern coffee shop workspace with warm natural light"
+        }
+      ],
+      assets: [
+        {
+          ref: "assets/products/ethiopia-yirgacheffe.webp",
+          dims: { width: 600, height: 327 },
+          mime: "image/webp",
+          origin: "derived",
+          bytes: 39048,
+          cost_usd: 0.0,
+          derived_from: "assets/drafts/draft-1788427249694342000-1.png",
+          pipeline: "resize(600x327), adjust(B:2,C:5), sharpen(1.2)",
+          prompt: "artisan roasted coffee beans package with clean minimalist typography on concrete table",
+          model: "local-pure-go",
+          image_path: "../../assets/products/ethiopia-yirgacheffe.webp"
+        },
+        {
+          ref: "assets/drafts/draft-1788427422510432000-1.png",
+          dims: { width: 768, height: 768 },
+          mime: "image/png",
+          origin: "generated",
+          bytes: 714783,
+          cost_usd: 0.1344,
+          derived_from: null,
+          pipeline: null,
+          prompt: "artisan roasted coffee beans package with clean minimalist typography on concrete table",
+          model: "gemini-3.1-flash-lite-image",
+          image_path: "../../assets/drafts/draft-1788427422510432000-1.png"
+        },
+        {
+          ref: "assets/drafts/draft-1788427249694342000-1.png",
+          dims: { width: 768, height: 768 },
+          mime: "image/png",
+          origin: "generated",
+          bytes: 654707,
+          cost_usd: 0.0336,
+          derived_from: null,
+          pipeline: null,
+          prompt: "artisan roasted coffee beans package with clean minimalist typography on concrete table",
+          model: "gemini-3.1-flash-lite-image",
+          image_path: "../../assets/drafts/draft-1788427249694342000-1.png"
+        },
+        {
+          ref: "assets/drafts/draft-1788426704306480000-1.png",
+          dims: { width: 768, height: 432 },
+          mime: "image/png",
+          origin: "generated",
+          bytes: 871103,
+          cost_usd: 0.0336,
+          derived_from: null,
+          pipeline: null,
+          prompt: "modern minimalist coffee shop interior with warm natural lighting",
+          model: "gemini-3.1-flash-lite-image",
+          image_path: "../../assets/drafts/draft-1788426704306480000-1.png"
+        }
+      ]
+    };
+
+    function setStatus(msg) {
+      document.getElementById('statusLine').textContent = msg;
+    }
+
+    function renderPalette() {
+      const row = document.getElementById('paletteRow');
+      row.innerHTML = '';
+      state.palette.forEach(hex => {
+        const d = document.createElement('div');
+        d.className = 'w-6 h-6 rounded border border-slate-700 cursor-pointer shadow-sm hover:scale-110 transition-transform';
+        d.style.backgroundColor = hex;
+        d.title = hex;
+        d.onclick = () => setStatus(`Palette color: ${hex} copied.`);
+        row.appendChild(d);
+      });
+    }
+
+    function renderSlots() {
+      const container = document.getElementById('slotsList');
+      container.innerHTML = '';
+      state.slots.forEach((slot, idx) => {
+        const isSelected = state.activePanel === 'slots' && state.selectedSlotIndex === idx;
+        const isBound = !!slot.asset;
+
+        const el = document.createElement('div');
+        el.className = `p-2.5 rounded-md cursor-pointer transition-all border ${
+          isSelected 
+            ? 'bg-purple-900/30 border-purple-500 text-white shadow' 
+            : 'bg-slate-950/60 border-slate-800/80 hover:bg-slate-800/40 text-slate-300'
+        }`;
+        
+        el.innerHTML = `
+          <div class="flex justify-between items-start gap-1">
+            <span class="font-bold text-xs ${isSelected ? 'text-purple-300' : 'text-slate-200'}">${slot.id}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold ${
+              isBound ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-amber-950 text-amber-300 border border-amber-800'
+            }">
+              ${isBound ? '✓ Bound' : '⚠ Empty'}
+            </span>
+          </div>
+          <div class="text-[10px] text-slate-400 mt-1 flex justify-between">
+            <span>Ratio: ${slot.aspect_ratio}</span>
+            <span>Min: ${slot.min_width}px</span>
+          </div>
+          ${isBound ? `<div class="text-[10px] text-cyan-400 truncate mt-1">↳ ${slot.asset.split('/').pop()}</div>` : ''}
+        `;
+
+        el.onclick = () => {
+          state.activePanel = 'slots';
+          state.selectedSlotIndex = idx;
+          updateUI();
+          setStatus(`Selected slot: ${slot.id}`);
+        };
+
+        container.appendChild(el);
+      });
+
+      // Update slot stat
+      const boundCount = state.slots.filter(s => !!s.asset).length;
+      document.getElementById('statSlotsSub').textContent = `${boundCount} bound • ${state.slots.length - boundCount} empty`;
+    }
+
+    function renderAssets() {
+      const container = document.getElementById('assetsList');
+      container.innerHTML = '';
+      state.assets.forEach((asset, idx) => {
+        const isSelected = state.activePanel === 'assets' && state.selectedAssetIndex === idx;
+        const isDerived = asset.origin === 'derived';
+
+        const el = document.createElement('div');
+        el.className = `p-2.5 rounded-md cursor-pointer transition-all border ${
+          isSelected 
+            ? 'bg-slate-800 border-pink-500 ring-1 ring-pink-500 text-white shadow-md' 
+            : 'bg-slate-950/60 border-slate-800/80 hover:bg-slate-800/40 text-slate-300'
+        }`;
+
+        const fileName = asset.ref.split('/').pop();
+        const kb = (asset.bytes / 1024).toFixed(1);
+
+        el.innerHTML = `
+          <div class="flex justify-between items-center gap-2">
+            <span class="font-bold text-xs truncate max-w-[210px] ${isSelected ? 'text-pink-300' : 'text-slate-200'}">
+              ${fileName}
+            </span>
+            <span class="text-[10px] px-2 py-0.5 rounded font-mono font-semibold ${
+              asset.cost_usd === 0 
+                ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' 
+                : 'bg-pink-950 text-pink-300 border border-pink-800'
+            }">
+              $${asset.cost_usd.toFixed(4)}
+            </span>
+          </div>
+          <div class="flex justify-between items-center text-[10px] text-slate-400 mt-1.5">
+            <span>${asset.dims.width}×${asset.dims.height} • ${kb} KB</span>
+            <span class="uppercase tracking-wider ${isDerived ? 'text-emerald-400' : 'text-purple-400'}">${asset.origin}</span>
+          </div>
+        `;
+
+        el.onclick = () => {
+          state.activePanel = 'assets';
+          state.selectedAssetIndex = idx;
+          updateUI();
+          setStatus(`Selected asset: ${fileName}`);
+        };
+
+        container.appendChild(el);
+      });
+    }
+
+    function renderInspector() {
+      const asset = state.assets[state.selectedAssetIndex];
+      if (!asset) return;
+
+      document.getElementById('inspImage').src = asset.image_path;
+      document.getElementById('inspRef').textContent = asset.ref.split('/').pop();
+      document.getElementById('inspDims').textContent = `${asset.dims.width} × ${asset.dims.height} px`;
+      
+      const originEl = document.getElementById('inspOrigin');
+      originEl.textContent = `${asset.origin} (${asset.model})`;
+      originEl.className = asset.origin === 'derived' ? 'text-emerald-400 font-semibold' : 'text-purple-400 font-semibold';
+
+      const costEl = document.getElementById('inspCost');
+      costEl.textContent = `$${asset.cost_usd.toFixed(4)} USD ${asset.cost_usd === 0 ? '(Free local)' : ''}`;
+      costEl.className = asset.cost_usd === 0 ? 'text-emerald-400 font-bold' : 'text-pink-400 font-bold';
+
+      // Derived & Pipeline rows
+      const derivedRow = document.getElementById('inspDerivedRow');
+      const transformRow = document.getElementById('inspTransformRow');
+      if (asset.derived_from) {
+        derivedRow.style.display = 'flex';
+        document.getElementById('inspDerived').textContent = asset.derived_from.split('/').pop();
+      } else {
+        derivedRow.style.display = 'none';
+      }
+
+      if (asset.pipeline) {
+        transformRow.style.display = 'flex';
+        document.getElementById('inspTransform').textContent = asset.pipeline;
+      } else {
+        transformRow.style.display = 'none';
+      }
+
+      // Prompt
+      document.getElementById('inspPrompt').textContent = `"${asset.prompt}"`;
+    }
+
+    function updateActivePanelStyles() {
+      const pSlots = document.getElementById('panelSlots');
+      const pAssets = document.getElementById('panelAssets');
+      const bSlots = document.getElementById('badgeSlots');
+      const bAssets = document.getElementById('badgeAssets');
+
+      if (state.activePanel === 'slots') {
+        pSlots.className = 'md:col-span-3 bg-slate-900/90 border border-purple-500/50 ring-1 ring-purple-500/20 rounded-lg flex flex-col overflow-hidden transition-all';
+        pAssets.className = 'md:col-span-5 bg-slate-900/90 border border-slate-800 rounded-lg flex flex-col overflow-hidden transition-all';
+        bSlots.className = 'text-[10px] bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded border border-purple-500/30';
+        bSlots.textContent = 'Active Panel';
+        bAssets.className = 'text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300';
+        bAssets.textContent = 'Tab 2';
+      } else {
+        pSlots.className = 'md:col-span-3 bg-slate-900/90 border border-slate-800 rounded-lg flex flex-col overflow-hidden transition-all';
+        pAssets.className = 'md:col-span-5 bg-slate-900/90 border border-pink-500/50 ring-1 ring-pink-500/20 rounded-lg flex flex-col overflow-hidden transition-all';
+        bAssets.className = 'text-[10px] bg-pink-900/50 text-pink-300 px-2 py-0.5 rounded border border-pink-500/30';
+        bAssets.textContent = 'Active Panel';
+        bSlots.className = 'text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300';
+        bSlots.textContent = 'Tab 1';
+      }
+    }
+
+    function bindCurrentAssetToSlot() {
+      const asset = state.assets[state.selectedAssetIndex];
+      const slot = state.slots[state.selectedSlotIndex];
+      if (!asset || !slot) return;
+
+      slot.asset = asset.ref;
+      updateUI();
+      setStatus(`✓ Successfully bound ${asset.ref.split('/').pop()} to slot '${slot.id}'!`);
+    }
+
+    function triggerTransform() {
+      const asset = state.assets[state.selectedAssetIndex];
+      if (!asset) return;
+      setStatus(`⚡ Transforming ${asset.ref.split('/').pop()} -> WebP 80% with pure Go (simulated $0.00)...`);
+    }
+
+    function openCurrentInBrowser() {
+      const asset = state.assets[state.selectedAssetIndex];
+      if (!asset) return;
+      window.open(asset.image_path, '_blank');
+      setStatus(`Opened full asset in new browser tab.`);
+    }
+
+    function updateUI() {
+      updateActivePanelStyles();
+      renderSlots();
+      renderAssets();
+      renderInspector();
+    }
+
+    // Keyboard Controller
+    window.addEventListener('keydown', (e) => {
+      // Tab switches focus
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        state.activePanel = state.activePanel === 'slots' ? 'assets' : 'slots';
+        updateUI();
+        setStatus(`Switched active panel to: ${state.activePanel.toUpperCase()}`);
+        return;
+      }
+
+      // Arrow navigation
+      if (e.key === 'ArrowUp' || e.key === 'k') {
+        e.preventDefault();
+        if (state.activePanel === 'slots') {
+          if (state.selectedSlotIndex > 0) state.selectedSlotIndex--;
+        } else {
+          if (state.selectedAssetIndex > 0) state.selectedAssetIndex--;
+        }
+        updateUI();
+      } else if (e.key === 'ArrowDown' || e.key === 'j') {
+        e.preventDefault();
+        if (state.activePanel === 'slots') {
+          if (state.selectedSlotIndex < state.slots.length - 1) state.selectedSlotIndex++;
+        } else {
+          if (state.selectedAssetIndex < state.assets.length - 1) state.selectedAssetIndex++;
+        }
+        updateUI();
+      }
+
+      // Actions
+      if (e.key === 'b' || e.key === 'B') {
+        bindCurrentAssetToSlot();
+      } else if (e.key === 't' || e.key === 'T') {
+        triggerTransform();
+      } else if (e.key === 'o' || e.key === 'O') {
+        openCurrentInBrowser();
+      }
+    });
+
+    // Wire inspector action buttons
+    document.getElementById('btnBind').onclick = bindCurrentAssetToSlot;
+    document.getElementById('btnTransform').onclick = triggerTransform;
+
+    // Boot
+    renderPalette();
+    updateUI();
+  </script>
+</body>
+</html>
